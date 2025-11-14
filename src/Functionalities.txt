@@ -1,0 +1,62 @@
+What functionalities do I want my music bot to have
+
+1. Playing Capabilites:
+    -- Should be able to play 
+        any song (upload or yt link or search(USING YOUTUBE SEARCH ENGINE 
+                                    OR LIBRARY? //Is that the word for it?)
+    -- Sooo, youtube literally denies any request to stream a song from every discord 
+        library so i physically can't do anything about that
+        (Soundcloud should work though but I'll come back to that later)
+
+2. Pausing and Resuming:
+    -- need to be able to use pause and resume commands so the song 
+        can stop and start at will --(This exists already)
+
+3. Playlist / Music Queue:
+    -- must be able to queue songs to play next once current
+        song is over
+        (Create a file that writes the name of the file )
+
+
+4. AudioMix (!!!)
+    -- the ability to crossfade into the next song (The Main Seller)
+    -- Equalizing features? (Bass boosting, Vocal isolation, etc)
+
+5. Creating Slash commands
+    -- Program should be able to use '!' to indicate a command for the bot
+        o Also! need to restrict bot to one channel so it doesn't get overloaded with messages
+
+6. Looping functionalities:
+    -- Program should be able to loop a song when asked to
+    !! Song starts lagging after it loops once (hardware issue or server request issue?)
+
+7. End/Skip feature
+    -- Be able to stop/skip song at will 
+        (either move onto next song in queue or stop playing
+            all together) 
+
+8. Duration (Check How long is remaining in song)
+What do I currently have to lookout for (in terms of intricacies with the bot)
+
+1. Staying in One VC
+    - The bot should stay in its dedicated vc (Music or smth), and shouldnt
+        be able to leave.
+
+2. Making sure that !play feature isnt abused
+    - If play is called while a song is currently playing, prompt user
+        with 'are you sure' before song is forcefully changed
+
+3. Cleanliness of code and portability
+    - This is a usable project, the only working feature being play, pause
+        and unpause, so far. Moving onward, the code should be cleaned up
+        as well as every feature being grouped by files to make it more readable
+        and user friendly
+
+Random Notes***
+    import { commands } from './commands.js' // This is how you import another class into a file
+
+
+
+Future Possibilities:
+    -- Incorporate AI, for music recommendations and unique responses (Lets Finish the Project First)
+
