@@ -3,12 +3,14 @@ const { Client, IntentsBitField} = require('discord.js'); //Bascially, it's impo
 const { AudioPlayerStatus, NoSubscriberBehavior, createAudioPlayer, createAudioResource, StreamType, joinVoiceChannel, getVoiceConnection, generateDependencyReport, VoiceConnection } = require('@discordjs/voice'); // //Imports vc commands because vc commands are a separate library
 const path = require('path');
 const fs = require('fs');
-const downloadSong = require('./song')
+const { Song } = require('./song')
 
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const ffmpegPath = require('ffmpeg-static');
 const { ytsong } = require('./playYoutubeSongs');
 const { UserSelectMenuComponent } = require('discord.js');
+
+let playlist = []; // This is where the playlist queue will be stored
 
 
 let player; // This is for our audioPlayer so the other functions will work
@@ -79,6 +81,10 @@ client.on('messageCreate', async (msg) => {
         case '!unloop':
             stopLoop(msg);
             break;
+        
+        case '!skip':
+            skipSong(msg);
+            break;
 
         default:
             console.log(`Unknown command: ${msg.content}`);
@@ -124,11 +130,63 @@ function handleHello(msg) {
 
 async function playSong(msg) {
     const attachment = msg.attachments.first()//Gets the first item in the attachment object (Usually the file you want to upload) --> Not sure if this combats multiple uploads
+    if (!attachment) {
+        if (playlist.length < 1) {
+            return msg.reply("Please attach an mp3 file to play!");
+        }
+        else{ 
+            const voiceChannel = msg.member?.voice?.channel;
+            if (!voiceChannel) return msg.reply("Join a voice channel first!");
+        
+            let connection = getVoiceConnection(msg.guild.id);
 
-    let filePath = await downloadSong(attachment, tempDir, attachment.name);
-    filePath = filePath.replace(/\\/g, "\\\\");
+            if (connection) {
+                if (connection.joinConfig.channelId !== voiceChannel.id) { //Checks to see if bot is in another channel
+                    return msg.reply(`Currently in **${connection.joinConfig.channelId}**, please try again later.`);
+                }
+                /* For now, lets make it so that it doesn't rejoin but just queues the song being played */
+            } else {
+                connection = joinVoiceChannel({
+                    channelId: voiceChannel.id,
+                    guildId: voiceChannel.guild.id,
+                    adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+                    selfDeaf: false,
+                    selfMute: false
+                })
+            }
 
-    console.log(filePath);
+            // Create audio player
+            player = createAudioPlayer();
+
+            // Load MP3 file
+            let resource = createAudioResource(playlist[0]); //I love coding
+
+
+            // Play audio
+            player.play(resource);
+            connection.subscribe(player);
+
+        }
+    } else {
+        let filePath = await downloadSongFile(attachment, tempDir, attachment.name);
+        filePath = filePath.replace(/\\/g, "\\\\");
+
+        console.log(filePath);
+
+
+        if (playlist.length == 10){
+            return msg.reply("Playlist is full! Please wait for current songs to finish before adding more.");
+        } 
+        else if (playlist.length > 0) {
+            playlist.push(filePath);
+            
+            return msg.reply("Song has been added to the queue!")
+        } else {
+            playlist.push(filePath);
+        }
+    }
+
+
 
     const voiceChannel = msg.member?.voice?.channel;
         if (!voiceChannel) return msg.reply("Join a voice channel first!");
@@ -154,7 +212,7 @@ async function playSong(msg) {
         player = createAudioPlayer();
 
         // Load MP3 file
-        let resource = createAudioResource(filePath); //I love coding
+        let resource = createAudioResource(playlist[0]); //I love coding
 
 
         // Play audio
@@ -170,15 +228,16 @@ async function playSong(msg) {
                 console.log("Song is over");
                 //Check if song is looped:
                 if (loopActive){
-                    resource = createAudioResource(filePath);
+                    resource = createAudioResource(playlist[0]);
                     player.play(resource)
                 } else {
-                    if (attachment && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            
-                //If looped, repeat song, else, delete and go to next song or stop playing)
+                    if (attachment && fs.existsSync(playlist[0])) fs.unlinkSync(playlist[0]);
+                    playlist.shift(); //Deletes the file from the system once done playin && shift playlist
+                //If looped, repeat song, else, delete and go to next song or stop playing
                 }
             }   
         });
+
 
     msg.reply(`~Playing Now~`);
 }    
@@ -293,14 +352,6 @@ function unpauseSong(msg) {
         if (connection.joinConfig.channelId !== voiceChannel.id) { //Checks to see if bot is in another channel
             return msg.reply(`Currently in **${connection.joinConfig.channelId}**, please try again later.`);            }
             /* For now, lets make it so that it doesn't rejoin but just queues the song being played */
-    } else {
-            connection = joinVoiceChannel({
-                channelId: voiceChannel.id,
-                guildId: voiceChannel.guild.id,
-                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-                selfDeaf: false,
-                selfMute: false
-            })
     }
 
     if (player.state.status === AudioPlayerStatus.Paused) {
@@ -309,7 +360,61 @@ function unpauseSong(msg) {
 
     
 }
-    //Create function that deletes ALL songs from file
+
+function skipSong(msg) {
+
+    const voiceChannel = msg.member?.voice?.channel;
+    if (!voiceChannel) return msg.reply("Join a voice channel first!");
+    
+
+    let connection = getVoiceConnection(msg.guild.id);
+
+    if (connection) {
+        if (connection.joinConfig.channelId !== voiceChannel.id) { //Checks to see if bot is in another channel
+            return msg.reply(`Currently in **${connection.joinConfig.channelId}**, please try again later.`);            }
+            /* For now, lets make it so that it doesn't rejoin but just queues the song being played */
+    } 
+
+    // !play --> if queue is empty : dont play --> else play whatevers already in the queue
+
+    if (player.state.status === AudioPlayerStatus.Playing) {
+        //What do i need to do?
+        // Destroy player 
+        // Shift to the next item in the playlist
+        // Play the next item (call playSong)
+        // ? how do i call playsong when there isnt a message attachment
+
+    }
+
+
+    
+
+}
+
+async function downloadSongFile(attachment, Dir, fileName) { // Downloads song file to temp folder (does it in background so bot can keep running)
+            try {
+                // Saves file to local system
+                const filePath = path.join(Dir, fileName);
+                // console.log(filePath);
+
+                // Fetch the file from discord (since they are saved as urls to discord's cloud system or whavtevr)
+                const response = await fetch(attachment.url) // becomes HTTP object, not a boolean
+                if (!response.ok) { //Ensures that response is actually accessible
+                    throw new Error(`Failed to fetch: **${response.statusText}**`);
+                }
+                
+                const buffer = await response.arrayBuffer();
+                fs.writeFileSync(filePath, Buffer.from(buffer));
+
+                console.log(`${fileName} has been downloaded!`);
+
+                return filePath; // Returns the file path so we can use it for our resource function
+            } catch (err) {
+                console.error("Error downloading file: " + err);
+                return null;
+            }
+    }
+//Create function that deletes ALL songs from file
 
 
 /*
