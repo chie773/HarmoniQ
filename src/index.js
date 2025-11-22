@@ -9,8 +9,11 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const ffmpegPath = require('ffmpeg-static');
 const { ytsong } = require('./playYoutubeSongs');
 const { UserSelectMenuComponent } = require('discord.js');
+const { zstdCompress } = require('zlib');
 
 let playlist = []; // This is where the playlist queue will be stored
+
+
 
 
 let player; // This is for our audioPlayer so the other functions will work
@@ -18,6 +21,39 @@ let loopActive; // This checks to see if user has activated loop feature
 
 const tempDir = path.join(__dirname, 'temp'); // Creates a temporary folder within local system
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir); //Checks to see if folder exists, if not it is created
+
+async function addTempFilesToPlaylist() {
+
+    const allowedExts = new Set(['.mp3', '.wav', '.ogg', '.m4a', '.aac']);
+    const added = [];
+
+    try {
+        const files = fs.readdirSync(tempDir);
+        for (const name of files) {
+            const fullPath = path.join(tempDir, name);
+            let stat;
+            try { stat = fs.statSync(fullPath); } catch { continue; }
+            if (!stat.isFile()) continue;
+
+            const ext = path.extname(name).toLowerCase();
+            if (!allowedExts.has(ext)) continue;
+
+            if (!playlist.includes(fullPath)) {
+                playlist.push(fullPath);
+                added.push(fullPath);
+            }
+        }
+
+        console.log("Added current files in temp folder");
+    } catch (err) {
+        console.error('Failed to read temp folder:', err);
+    }
+
+    console.log(playlist);
+}
+
+addTempFilesToPlaylist();
+
 
 
 /* Client -- Main connections with discord from bot, listens to events happening inside the server, while sending actions back
@@ -129,13 +165,7 @@ function handleHello(msg) {
 
 
 async function playSong(msg) {
-    const attachment = msg.attachments.first()//Gets the first item in the attachment object (Usually the file you want to upload) --> Not sure if this combats multiple uploads
-    if (!attachment) {
-        if (playlist.length < 1) {
-            return msg.reply("Please attach an mp3 file to play!");
-        }
-        else{ 
-            const voiceChannel = msg.member?.voice?.channel;
+    const voiceChannel = msg.member?.voice?.channel;
             if (!voiceChannel) return msg.reply("Join a voice channel first!");
         
             let connection = getVoiceConnection(msg.guild.id);
@@ -154,18 +184,31 @@ async function playSong(msg) {
                     selfMute: false
                 })
             }
+    
+    
+    
+    const attachment = msg.attachments.first()//Gets the first item in the attachment object (Usually the file you want to upload) --> Not sure if this combats multiple uploads
+    if (!attachment) {
+        if (playlist.length < 1) {
+
+            return msg.reply("Please attach an mp3 file to play!");
+        }
+        else{
 
             // Create audio player
             player = createAudioPlayer();
 
             // Load MP3 file
-            let resource = createAudioResource(playlist[0]); //I love coding
+            let resource = createAudioResource(fs.createReadStream(playlist[0]), {
+            inputType: StreamType.Arbitrary,
+            inlineVolume: true
+            });
 
+            resource.volume.setVolume(0.3);
 
             // Play audio
             player.play(resource);
             connection.subscribe(player);
-
         }
     } else {
         let filePath = await downloadSongFile(attachment, tempDir, attachment.name);
@@ -175,49 +218,33 @@ async function playSong(msg) {
 
 
         if (playlist.length == 10){
-            return msg.reply("Playlist is full! Please wait for current songs to finish before adding more.");
+            msg.reply("Playlist is full! Please wait for current songs to finish before adding more.");
         } 
         else if (playlist.length > 0) {
             playlist.push(filePath);
             
-            return msg.reply("Song has been added to the queue!")
+            msg.reply("Song has been added to the queue!")
         } else {
             playlist.push(filePath);
-        }
-    }
-
-
-
-    const voiceChannel = msg.member?.voice?.channel;
-        if (!voiceChannel) return msg.reply("Join a voice channel first!");
-    
-        let connection = getVoiceConnection(msg.guild.id);
-
-        if (connection) {
-            if (connection.joinConfig.channelId !== voiceChannel.id) { //Checks to see if bot is in another channel
-                return msg.reply(`Currently in **${connection.joinConfig.channelId}**, please try again later.`);
-            }
-            /* For now, lets make it so that it doesn't rejoin but just queues the song being played */
-        } else {
-            connection = joinVoiceChannel({
-                channelId: voiceChannel.id,
-                guildId: voiceChannel.guild.id,
-                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-                selfDeaf: false,
-                selfMute: false
-            })
         }
 
         // Create audio player
         player = createAudioPlayer();
 
         // Load MP3 file
-        let resource = createAudioResource(playlist[0]); //I love coding
+        let resource = createAudioResource(fs.createReadStream(playlist[0]), {
+        inputType: StreamType.Arbitrary,
+        inlineVolume: true
+        });
+
+        resource.volume.setVolume(0.3);
 
 
         // Play audio
         player.play(resource);
         connection.subscribe(player);
+    }
+
 
         player.on('error', console.error);
         player.on('stateChange', (oldState, newState) => {
@@ -229,11 +256,18 @@ async function playSong(msg) {
                 //Check if song is looped:
                 if (loopActive){
                     resource = createAudioResource(playlist[0]);
-                    player.play(resource)
+                    player.play(resource);
                 } else {
                     if (attachment && fs.existsSync(playlist[0])) fs.unlinkSync(playlist[0]);
+                    if (playlist.length == 0) { 
+                        return msg.reply("Queue is now empty, Play a Song!");
+                    } else {
+
                     playlist.shift(); //Deletes the file from the system once done playin && shift playlist
                 //If looped, repeat song, else, delete and go to next song or stop playing
+                    resource = createAudioResource(playlist[0]);
+                    player.play(resource);
+                    }
                 }
             }   
         });
@@ -269,6 +303,7 @@ function pauseSong(msg) {
     } else {
         msg.reply("couldnt pause");
     }
+
 
 
     
@@ -377,18 +412,23 @@ function skipSong(msg) {
 
     // !play --> if queue is empty : dont play --> else play whatevers already in the queue
 
-    if (player.state.status === AudioPlayerStatus.Playing) {
-        //What do i need to do?
-        // Destroy player 
-        // Shift to the next item in the playlist
-        // Play the next item (call playSong)
-        // ? how do i call playsong when there isnt a message attachment
+    if (player.state.status === AudioPlayerStatus.Playing || player.state.status === AudioPlayerStatus.Paused || player.state.status === AudioPlayerStatus.AutoPaused) {
+        const prevSong = playlist.shift();
+        if (playlist.length == 0) { 
+            return msg.reply("Queue is now empty, Play a Song!");
+        }
+        else {
+        player.stop();
 
+        resource = createAudioResource(playlist[0]);
+        player.play(resource);
+
+
+        if (fs.existsSync(playlist[0])) fs.unlinkSync(prevSong);
+        }
+    } else {
+        return msg.reply("Nothing is playing");
     }
-
-
-    
-
 }
 
 async function downloadSongFile(attachment, Dir, fileName) { // Downloads song file to temp folder (does it in background so bot can keep running)
@@ -444,7 +484,7 @@ process.on('SIGINT', cleanupFolder);
 // CNTRL + C --> closes the bot in the nodemon managaer
 
 // How to secure token (use terminal)
-client.login('MTQzMTA2NTQ2MTg0NzYyNTczOA.GP3uUE.i0Wn9LKdE_TZbo7i4t__4Cgf76uA9wjyQusOos');
+client.login(process.env.TOKEN);
 
 
 // Organize Main Folder or continue building functionalities in different folders?
