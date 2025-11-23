@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import { Attachment } from 'discord.js';
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../config.ts';
 
 export async function downloadSongFile(
     attachment: Attachment,
