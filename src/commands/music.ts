@@ -1,5 +1,5 @@
-import { Message } from 'discord.js';
-import { AudioPlayerStatus } from '@discordjs/voice';
+import { Attachment, Message } from 'discord.js';
+import { AudioPlayerStatus, VoiceConnection } from '@discordjs/voice';
 import { AudioPlayerManager } from '../audio/player.ts';
 import { Queue } from '../audio/queue.ts';
 import { validateAndGetConnection } from '../utils/voiceChannel.ts';
