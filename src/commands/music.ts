@@ -42,8 +42,8 @@ export class MusicCommands {
 
     private async handleAttachment(
         msg: Message,
-        attachment: any,
-        connection: any
+        attachment: Attachment,
+        connection: VoiceConnection
     ): Promise<void> {
         if (!isValidAudioFile(attachment.name)) {
             msg.reply('Please attach a valid audio file (mp3, wav, ogg, m4a, aac)!');
@@ -75,7 +75,7 @@ export class MusicCommands {
     private async handleFileInput(
         msg: Message,
         input: string,
-        connection: any
+        connection: VoiceConnection
     ): Promise<void> {
         if (input.startsWith('http://') || input.startsWith('https://')) {
             await this.handleUrlInput(msg, input, connection);
@@ -112,7 +112,7 @@ export class MusicCommands {
     private async handleUrlInput(
         msg: Message,
         url: string,
-        connection: any
+        connection: VoiceConnection
     ): Promise<void> {
         const urlPath = new URL(url).pathname;
         const fileName = path.basename(urlPath) || `audio_${Date.now()}.mp3`;
@@ -157,7 +157,7 @@ export class MusicCommands {
     private async addToQueueAndPlay(
         msg: Message,
         filePath: string,
-        connection: any,
+        connection: VoiceConnection,
         isDownloaded: boolean
     ): Promise<void> {
         if (this.queue.isFull()) {
@@ -176,7 +176,7 @@ export class MusicCommands {
         }
     }
 
-    private async handleQueuePlay(msg: Message, connection: any): Promise<void> {
+    private async handleQueuePlay(msg: Message, connection: VoiceConnection): Promise<void> {
         if (this.queue.isEmpty()) {
             msg.reply('Please attach an audio file to play or provide a file path/URL!');
             return;
