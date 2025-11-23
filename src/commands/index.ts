@@ -1,8 +1,8 @@
 import { Message } from 'discord.js';
-import { handleJoin, handleLeave } from './voice.js';
-import { MusicCommands } from './music.js';
-import { AudioPlayerManager } from '../audio/player.js';
-import { Queue } from '../audio/queue.js';
+import { handleJoin, handleLeave } from './voice.ts';
+import { MusicCommands } from './music.ts';
+import { AudioPlayerManager } from '../audio/player.ts';
+import { Queue } from '../audio/queue.ts';
 
 export class CommandRouter {
     private musicCommands: MusicCommands;
