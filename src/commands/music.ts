@@ -124,15 +124,14 @@ export class MusicCommands {
         const urlPath =  new URL(url).pathname;
         // Check to see if its a mp3 link or direct youtube link
 
-        const channelId = connection.joinConfig.channelId;
-        if (!channelId) {
+        if (!connection.joinConfig.channelId) {
             msg.reply('Unable to get voice channel ID from connection.');
             return;
         }
 
         const player = client.manager.createPlayer({
                 guildId: connection.joinConfig.guildId,
-                voiceChannelId: channelId,
+                voiceChannelId: connection.joinConfig.channelId,
                 textChannelId: msg.channel.id,
                 autoPlay: true,
         });
