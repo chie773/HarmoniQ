@@ -7,6 +7,9 @@ import { downloadSongFile, isValidAudioFile, fileExists } from '../utils/fileHan
 import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
+import { client } from '../index.js';
+import { Manager } from 'moonlink.js';
+
 
 export class MusicCommands {
     constructor(
@@ -35,6 +38,7 @@ export class MusicCommands {
             await this.handleAttachment(msg, attachment, connection);
         } else if (args.length > 0) {
             await this.handleFileInput(msg, args[0], connection);
+            return;
         } else {
             await this.handleQueuePlay(msg, connection);
         }
@@ -71,6 +75,10 @@ export class MusicCommands {
             msg.reply(`**${songName}** has been added to the queue!`);
         }
     }
+
+    // Check to see what type of url it is.
+    // Play-dl uses Soundcloud, Spotify, Youtube
+    // Create Helper function to ensure soundcloud link?
 
     private async handleFileInput(
         msg: Message,
@@ -114,30 +122,65 @@ export class MusicCommands {
         url: string,
         connection: VoiceConnection
     ): Promise<void> {
-        const urlPath = new URL(url).pathname;
-        const fileName = path.basename(urlPath) || `audio_${Date.now()}.mp3`;
+        const urlPath =  new URL(url).pathname;
+        // Check to see if its a mp3 link or direct youtube link
 
-        if (!isValidAudioFile(fileName)) {
-            const defaultFileName = fileName.includes('.') ? fileName : `${fileName}.mp3`;
-            const filePath = await this.downloadFromUrl(url, defaultFileName);
-            if (!filePath) {
-                msg.reply('Failed to download the file from URL.');
-                return;
-            }
-            await this.addToQueueAndPlay(msg, filePath, connection, true);
+        const player = client.manager.createPlayer({
+                guildId: connection.joinConfig.guildId,
+                voiceChannelId: connection.joinConfig.channelId,
+                textChannelId: msg.channel.id,
+                autoPlay: true,
+        });
+
+        if (!isValidAudioFile(url)) {
+
+            console.log("I reach this line before imploding on myself");
+            player.connect();
+        
+        const results = await client.manager.search({ query: url });
+        if (results.tracks.length < 1) {
+            console.log('No tracks found');
+            return;
         } else {
-            const filePath = await this.downloadFromUrl(url, fileName);
-            if (!filePath) {
-                msg.reply('Failed to download the file from URL.');
-                return;
-            }
-            await this.addToQueueAndPlay(msg, filePath, connection, true);
+            player.queue.add(results.tracks[0]);
+            if (!player.playing) player.play();
+            msg.reply('Player playing song i hope');
+            return;
+        }} else {
+            return;
         }
+        
+        
+
+
+
+
+        const fileName = path.basename(urlPath) || `audio_${Date.now()}.mp3`; 
+        // --> Provides unique file name if parsing basename isn't possible
+        
+        console.log(fileName);
+
+        // if (!isValidAudioFile(fileName)) {
+        //     const defaultFileName = fileName.includes('.') ? fileName : `${fileName}.mp3`;
+        //     const filePath = await this.downloadFromUrl(url, defaultFileName);
+        //     if (!filePath) {
+        //         msg.reply('Failed to download the file from URL.');
+        //         return;
+        //     }
+        //     await this.addToQueueAndPlay(msg, filePath, connection, true);
+        // } else {
+        //     const filePath = await this.downloadFromUrl(url, fileName);
+        //     if (!filePath) {
+        //         msg.reply('Failed to download the file from URL.');
+        //         return;
+        //     }
+        //     await this.addToQueueAndPlay(msg, filePath, connection, true);
+        // }
     }
 
     private async downloadFromUrl(url: string, fileName: string): Promise<string | null> {
         try {
-            const response = await fetch(url);
+            const response = await fetch(url); 
             if (!response.ok) {
                 throw new Error(`Failed to fetch: ${response.statusText}`);
             }
@@ -145,6 +188,31 @@ export class MusicCommands {
             const buffer = await response.arrayBuffer();
             const filePath = path.join(this.tempDir, fileName);
             fs.writeFileSync(filePath, Buffer.from(buffer));
+
+            // This doesn't work because if the url link returns something other than a
+            // valid audio file (HTML,JSON, etc), it won't play anything
+
+            /* 
+                Fix?
+
+                -- Import Soundcloud API to handle soundcloud links (need (isSoundcloudLink) func in order to validate)
+                -- Use play-dl to stream soundcloud links (May not be allowed since soundcloudAPI exists)
+                -- Use Lavalink --> Leading API in using audio server commands (Separate Java Server that I have to connect to alongside the bot)
+                   ---> Not prefered
+
+                Lets just incorporate Soundcloud API for now (play-dl is dead)
+                 -- Soundcloud is making me register the app just to use the API (faaah)
+                  -- Can't even find the link to register (link on website is dead) ((faaaaah))
+
+                Lavalink it is.
+                1: Lavalink is installed and running (How do i close this?)
+                2: 
+
+
+            */
+
+
+
 
             console.log(`Downloaded file from URL: ${fileName}`);
             return filePath;

@@ -1,14 +1,24 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Handles main functions of the 
+
+
 import { Client, GatewayIntentBits } from 'discord.js';
 import { getVoiceConnection } from '@discordjs/voice';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+<<<<<<< Updated upstream
 import { Queue } from './audio/queue.ts';
 import { AudioPlayerManager } from './audio/player.ts';
 import { CommandRouter } from './commands/index.ts';
+=======
+import { Queue } from './audio/queue.js';
+import { AudioPlayerManager } from './audio/player.js';
+import { CommandRouter } from './commands/index.js';
+import { Manager } from 'moonlink.js';
+>>>>>>> Stashed changes
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -36,13 +46,50 @@ const client = new Client({
     ],
 });
 
+declare module 'discord.js' {
+    interface Client {
+        manager: Manager;
+    }
+}
+
+client.manager = new Manager({
+    nodes:[
+        {
+            host: 'localhost',
+            port: 8080,
+            password: 'youshallnotpass',
+            secure: false,
+        },
+    ],
+    options: {} as any,
+    sendPayload: (guildId: string, payload: string) => {
+        const guild = client.guilds.cache.get(guildId);
+        if (guild) guild.shard.send(JSON.parse(payload));
+    },
+});
+
+
+
+
 client.on('ready', (c) => {
-    console.log(`${c.user.displayName} is online.`);
+    console.log(`${c.user.displayName} is online!`);
+    client.manager.init(c.user.id);
 });
 
 client.on('messageCreate', async (msg) => {
     await commandRouter.route(msg);
 });
+
+client.on('raw', (packet) => {
+  client.manager.packetUpdate(packet);
+});
+
+
+
+// Handle node events
+client.manager.on('nodeConnected', (node) => console.log(`Node ${node.identifier} connected!`));
+client.manager.on('nodeError', (node, error) => console.error(`Node ${node.identifier} error:`, error));
+
 
 async function cleanup() {
     if (client.isReady()) {
@@ -97,3 +144,18 @@ client.login(process.env.TOKEN).catch((err) => {
     console.error('Failed to login:', err);
     process.exit(1);
 });
+
+export { client };
+
+
+
+
+const myFunction= (name:string,age:number ) =>{ 
+console.log("Hello, " + name+ "! You are " + age+ " years old." );
+
+let unusedVariable = 42 // Unused variable (ESLint should warn about this)
+
+return{name: name, age:age}
+}
+
+console.log(myFunction( "Alice",25)) // Incorrect spacing, missing semicolon, inconsistent quotes
