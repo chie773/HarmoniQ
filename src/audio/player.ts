@@ -8,8 +8,8 @@ import {
     VoiceConnection,
     getVoiceConnection,
 } from '@discordjs/voice';
-import { CONFIG } from '../config.js';
-import { Queue } from './queue.js';
+import { CONFIG } from '../config.ts';
+import { Queue } from './queue.ts';
 
 export class AudioPlayerManager {
     private player: AudioPlayer;

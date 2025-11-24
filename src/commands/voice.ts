@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
 import { joinVoiceChannel, getVoiceConnection } from '@discordjs/voice';
-import { validateVoiceChannel, getOrCreateConnection } from '../utils/voiceChannel.js';
+import { validateVoiceChannel, getOrCreateConnection } from '../utils/voiceChannel.ts';
 
 export function handleJoin(msg: Message): void {
     const voiceChannel = validateVoiceChannel(msg);
