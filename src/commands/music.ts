@@ -7,8 +7,7 @@ import { downloadSongFile, isValidAudioFile, fileExists } from '../utils/fileHan
 import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
-import { client } from '../index.js';
-import { Manager } from 'moonlink.js';
+import { client } from '../index.ts';
 
 
 export class MusicCommands {
@@ -125,9 +124,15 @@ export class MusicCommands {
         const urlPath =  new URL(url).pathname;
         // Check to see if its a mp3 link or direct youtube link
 
+        const channelId = connection.joinConfig.channelId;
+        if (!channelId) {
+            msg.reply('Unable to get voice channel ID from connection.');
+            return;
+        }
+
         const player = client.manager.createPlayer({
                 guildId: connection.joinConfig.guildId,
-                voiceChannelId: connection.joinConfig.channelId,
+                voiceChannelId: channelId,
                 textChannelId: msg.channel.id,
                 autoPlay: true,
         });

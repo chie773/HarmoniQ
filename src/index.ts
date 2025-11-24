@@ -9,16 +9,10 @@ import { getVoiceConnection } from '@discordjs/voice';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
-<<<<<<< Updated upstream
 import { Queue } from './audio/queue.ts';
 import { AudioPlayerManager } from './audio/player.ts';
 import { CommandRouter } from './commands/index.ts';
-=======
-import { Queue } from './audio/queue.js';
-import { AudioPlayerManager } from './audio/player.js';
-import { CommandRouter } from './commands/index.js';
 import { Manager } from 'moonlink.js';
->>>>>>> Stashed changes
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
