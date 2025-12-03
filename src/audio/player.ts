@@ -1,4 +1,5 @@
 import fs from 'fs';
+import {Message, VoiceBasedChannel} from 'discord.js';
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -10,6 +11,11 @@ import {
 } from '@discordjs/voice';
 import { CONFIG } from '../config.ts';
 import { Queue } from './queue.ts';
+import { client } from '../index.ts';
+import  { Player } from 'moonlink.js';
+
+
+
 
 export class AudioPlayerManager {
     private player: AudioPlayer;
@@ -39,6 +45,9 @@ export class AudioPlayerManager {
             }
         });
     }
+
+
+
 
     private handleSongEnd(): void {
         if (this.queue.isEmpty()) {

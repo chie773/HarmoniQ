@@ -8,13 +8,16 @@ import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import { client } from '../index.ts';
+import { Manager, Player } from 'moonlink.js';
 
 
 export class MusicCommands {
+    private moonlinkPlayer: any;
+    private isCreated = false;
     constructor(
         private playerManager: AudioPlayerManager,
         private queue: Queue,
-        private tempDir: string
+        private tempDir: string, 
     ) {}
 
     private getSongName(filePath: string): string {
@@ -36,11 +39,14 @@ export class MusicCommands {
         if (attachment) {
             await this.handleAttachment(msg, attachment, connection);
         } else if (args.length > 0) {
-            await this.handleFileInput(msg, args[0], connection);
+            console.log(args.join(" "))
+            const string = args.join(" ")
+            await this.handleFileInput(msg, string, connection);
             return;
         } else {
             await this.handleQueuePlay(msg, connection);
         }
+
     }
 
     private async handleAttachment(
@@ -53,26 +59,46 @@ export class MusicCommands {
             return;
         }
 
-        const filePath = await downloadSongFile(attachment, this.tempDir, attachment.name);
-        if (!filePath) {
-            msg.reply('Failed to download the file.');
-            return;
+        if (!this.isCreated){
+            this.createMoonlinkPlayer(msg);
         }
 
-        if (this.queue.isFull()) {
-            msg.reply('Playlist is full! Please wait for current songs to finish before adding more.');
-            return;
-        }
+        const songUrl = await fetch(attachment.url);
+        const result = await client.manager.search({query: songUrl.url});
+        if (result.tracks.length < 1) {
+                console.log('No tracks found');
+                return;
+            } else {
+                this.moonlinkPlayer.queue.add(result.tracks[0]);
+                if (!this.moonlinkPlayer.playing){
+                  this.moonlinkPlayer.play();
+                    
+                  msg.reply('Playing THE noob song');
+                  return;
+                } 
+            }
 
-        this.queue.add(filePath, true);
-        const songName = this.getSongName(filePath);
 
-        if (this.playerManager.isIdle()) {
-            this.playerManager.play(connection, msg.guild!.id);
-            msg.reply(`~Playing Now: **${songName}**~`);
-        } else {
-            msg.reply(`**${songName}** has been added to the queue!`);
-        }
+        // const filePath = await downloadSongFile(attachment, this.tempDir, attachment.name);
+        // if (!filePath) {
+        //     msg.reply('Failed to download the file.');
+        //     return;
+        // }
+
+        // if (this.queue.isFull()) {
+        //     msg.reply('Playlist is full! Please wait for current songs to finish before adding more.');
+        //     return;
+        // }
+
+        // this.queue.add(filePath, true);
+        // const songName = this.getSongName(filePath);
+
+        // if (this.playerManager.isIdle()) {
+        //     this.playerManager.play(connection, msg.guild!.id);
+        //     msg.reply(`~Playing Now: **${songName}**~`);
+        // } else {
+        //     msg.reply(`**${songName}** has been added to the queue!`);
+        // }
     }
 
     // Check to see what type of url it is.
@@ -89,31 +115,51 @@ export class MusicCommands {
             return;
         }
 
-        const filePath = path.resolve(input);
-        if (!fileExists(filePath)) {
-            msg.reply('File not found! Please provide a valid file path or URL.');
-            return;
+        if (!this.isCreated){
+            this.createMoonlinkPlayer(msg);
         }
 
-        if (!isValidAudioFile(filePath)) {
-            msg.reply('Please provide a valid audio file (mp3, wav, ogg, m4a, aac)!');
-            return;
-        }
+        // const filePath = path.resolve(input);
+        // if (!fileExists(filePath)) {
+        //     msg.reply('File not found! Please provide a valid file path or URL.');
+        //     return;
+        // }
 
-        if (this.queue.isFull()) {
-            msg.reply('Playlist is full! Please wait for current songs to finish before adding more.');
-            return;
-        }
+        // if (!isValidAudioFile(filePath)) {
+        //     msg.reply('Please provide a valid audio file (mp3, wav, ogg, m4a, aac)!');
+        //     return;
+        // }
 
-        this.queue.add(filePath, false);
-        const songName = this.getSongName(filePath);
+        // if (this.queue.isFull()) {
+        //     msg.reply('Playlist is full! Please wait for current songs to finish before adding more.');
+        //     return;
+        // }
 
-        if (this.playerManager.isIdle()) {
-            this.playerManager.play(connection, msg.guild!.id);
-            msg.reply(`~Playing Now: **${songName}**~`);
-        } else {
-            msg.reply(`**${songName}** has been added to the queue!`);
-        }
+        const result = await client.manager.search({query: input});
+        const song = result.tracks[0];
+        if (result.tracks.length < 1) {
+                console.log('No tracks found');
+                return;
+            } else {
+                this.moonlinkPlayer.connect();
+                
+                this.moonlinkPlayer.queue.add(result.tracks[0]);
+                msg.reply(`**${song.title}** has been added to the queue!`);
+                if (!this.moonlinkPlayer.playing){
+                  this.moonlinkPlayer.play();
+                    
+                  msg.reply(`~Playing Now: **${song.title}**~`);
+                  return;
+                } 
+            }
+
+        
+        // if (this.playerManager.isIdle()) {
+        //     this.playerManager.play(connection, msg.guild!.id);
+        //     msg.reply(`~Playing Now: **${song.title}**~`);
+        // } else {
+        //     msg.reply(`**${song.title}** has been added to the queue!`);
+        // }
     }
 
     private async handleUrlInput(
@@ -122,42 +168,45 @@ export class MusicCommands {
         connection: VoiceConnection
     ): Promise<void> {
         const urlPath =  new URL(url).pathname;
-        // Check to see if its a mp3 link or direct youtube link
+        // Check to see if its a youtube or soundcloud link.
 
-        if (!connection.joinConfig.channelId) {
+        const channelId = connection.joinConfig.channelId;
+        if (!channelId) {
             msg.reply('Unable to get voice channel ID from connection.');
             return;
         }
 
-        const player = client.manager.createPlayer({
-                guildId: connection.joinConfig.guildId,
-                voiceChannelId: connection.joinConfig.channelId,
-                textChannelId: msg.channel.id,
-                autoPlay: true,
-        });
+        if (!this.isCreated){
+            this.createMoonlinkPlayer(msg);
+        }
 
         if (!isValidAudioFile(url)) {
-
             console.log("I reach this line before imploding on myself");
-            player.connect();
+            this.moonlinkPlayer.connect();
         
-        const results = await client.manager.search({ query: url });
-        if (results.tracks.length < 1) {
-            console.log('No tracks found');
-            return;
+            const results = await client.manager.search({ query: url });
+            if (results.tracks.length < 1) {
+                console.log('No tracks found');
+                return;
+            } else {
+                this.moonlinkPlayer.queue.add(results.tracks[0]);
+                if (!this.moonlinkPlayer.playing){
+                  this.moonlinkPlayer.play();
+                    
+                  msg.reply('PLaying ur noob song');
+                  return;
+                } 
+            }
         } else {
-            player.queue.add(results.tracks[0]);
-            if (!player.playing) player.play();
-            msg.reply('Player playing song i hope');
-            return;
-        }} else {
             return;
         }
         
+        /* 
+            How do i pattern match the link for youtube?
+
+            
+        */
         
-
-
-
 
         const fileName = path.basename(urlPath) || `audio_${Date.now()}.mp3`; 
         // --> Provides unique file name if parsing basename isn't possible
@@ -333,4 +382,32 @@ export class MusicCommands {
             msg.reply('Nothing is playing...');
         }
     }
+
+    createMoonlinkPlayer(msg: Message): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const { voiceChannel, connection } = result;
+
+        const channelId = connection.joinConfig.channelId;
+        if (!channelId) {
+            msg.reply('Unable to get voice channel ID from connection.');
+            return;
+        } //Javascript can see if you null check your variables (Thats actually pretty cool)
+
+        this.moonlinkPlayer = client.manager.createPlayer({
+                guildId: connection.joinConfig.guildId,
+                voiceChannelId: channelId,
+                textChannelId: msg.channel.id,
+                autoPlay: false,
+        });
+
+        this.isCreated = true;
+    }
+
+    getMoonlinkPlayer(): Player {
+        return this.moonlinkPlayer;
+    }
+
+    
 }

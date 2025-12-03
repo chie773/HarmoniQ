@@ -1,55 +1,61 @@
-// Where i'll store all the commands for the bot
+What functionalities do I want my music bot to have
+
+1. Playing Capabilites:
+    -- Should be able to play 
+        any song (upload or yt link or search(USING YOUTUBE SEARCH ENGINE 
+                                    OR LIBRARY? //Is that the word for it?)
+    -- Sooo, youtube literally denies any request to stream a song from every discord 
+        library so i physically can't do anything about that
+        (Soundcloud should work though but I'll come back to that later)
+
+2. Pausing and Resuming:
+    -- need to be able to use pause and resume commands so the song 
+        can stop and start at will --(This exists already)
+
+3. Playlist / Music Queue:
+    -- must be able to queue songs to play next once current
+        song is over
+        (Create a file that writes the name of the file )
 
 
-// Next command, creating a playlist queue
-// How do i even make this?
-// Ways to create a playlist queue
-/* Create a file that holds the paths of all the downloaded files,
-    then parse file for the next song
-    Pros: Is there even a pro to this? LOL 
-        -- Simple file storage, easy to manage?
-    Cons:
-        -- Takes up a bunch of file space
-        -- Wouldnt be good for porting (you don't want to constantly
-                                        download things to a host pc)
-                                        
+4. AudioMix (!!!)
+    -- the ability to crossfade into the next song (The Main Seller)
+    -- Equalizing features? (Bass boosting, Vocal isolation, etc)
 
-    Use an external host website to manage song requests
-    Pros: 
-        -- Minimizes load of pc, keeps things online based
-        
-    Cons:
-        -- Might negate file upload feature (may need way to download files
-                                            to the website)
-    
-    
-    Store the names of the songs within an array and based on the request
-    do the approriate action (file == download and play,
-                                yt link == play from youtube,
-                                just song name == search and play)
+5. Creating Slash commands
+    -- Program should be able to use '!' to indicate a command for the bot
+        o Also! need to restrict bot to one channel so it doesn't get overloaded with messages
 
-    Pros: 
-        -- removes need for external website or extra files in order to store
-        data // dynamic storage (just pop the song from arrayQueue once playing)
-        
-    Cons: 
-        -- Discord bot message search functionalities are very limited
-        -- May have to build searching capabilities
+6. Looping functionalities:
+    -- Program should be able to loop a song when asked to
+    !! Song starts lagging after it loops once (hardware issue or server request issue?)
 
-*/
+7. End/Skip feature
+    -- Be able to stop/skip song at will 
+        (either move onto next song in queue or stop playing
+            all together) 
 
-// Before all this, lets make the bot able to play youtube links
-// const { AudioResource, createAudioResource, createAudioPlayer, StreamType } = require("@discordjs/voice");
-// const Youtube = require('youtube-sr').default; 
+8. Duration (Check How long is remaining in song)
+What do I currently have to lookout for (in terms of intricacies with the bot)
+
+1. Staying in One VC
+    - The bot should stay in its dedicated vc (Music or smth), and shouldnt
+        be able to leave.
+
+2. Making sure that !play feature isnt abused
+    - If play is called while a song is currently playing, prompt user
+        with 'are you sure' before song is forcefully changed
+
+3. Cleanliness of code and portability
+    - This is a usable project, the only working feature being play, pause
+        and unpause, so far. Moving onward, the code should be cleaned up
+        as well as every feature being grouped by files to make it more readable
+        and user friendly
+
+Random Notes***
+    import { commands } from './commands.js' // This is how you import another class into a file
 
 
-// async function run() {
-//     const video = await Youtube.searchOne('herohunterxdd silksong is easy')
-//     console.log(video.url)
-//     console.log(video.title)
-//     console.log(video.url)
-// } 
 
-// const song = createAudioResource()
-
-
+Future Possibilities:
+    -- Incorporate AI, for music recommendations and unique responses (Lets Finish the Project First)

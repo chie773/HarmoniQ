@@ -1,6 +1,7 @@
 import { Message } from 'discord.js';
 import { joinVoiceChannel, getVoiceConnection } from '@discordjs/voice';
 import { validateVoiceChannel, getOrCreateConnection } from '../utils/voiceChannel.ts';
+import { client } from '../index.ts';
 
 export function handleJoin(msg: Message): void {
     const voiceChannel = validateVoiceChannel(msg);
@@ -24,7 +25,18 @@ export function handleLeave(msg: Message): void {
         return;
     }
 
-    connection.destroy();
-    const channelName = voiceChannel?.name || 'the voice channel';
-    msg.reply(`Left **${channelName}**`);
+    if (!msg.guildId){
+        return;
+    }
+
+    const moonlinkPlayer = client.manager.players.get(msg.guildId);
+    if (moonlinkPlayer && moonlinkPlayer.voiceChannelId) {
+        moonlinkPlayer.destroy();
+        const channelName = voiceChannel?.name || 'the voice channel';
+        msg.reply(`Left **${channelName}**`);
+    } else {
+        connection.destroy();
+        const channelName = voiceChannel?.name || 'the voice channel';
+        msg.reply(`Left **${channelName}**`);
+    }    
 }
