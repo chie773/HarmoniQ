@@ -70,10 +70,11 @@ export class MusicCommands {
                 return;
             } else {
                 this.moonlinkPlayer.queue.add(result.tracks[0]);
+                msg.reply(`${result.tracks[0].title} has been added to the queue!`);
                 if (!this.moonlinkPlayer.playing){
                   this.moonlinkPlayer.play();
                     
-                  msg.reply('Playing THE noob song');
+                  msg.reply(`Playing ${result.tracks[0].title}`);
                   return;
                 } 
             }
@@ -208,11 +209,6 @@ export class MusicCommands {
         */
         
 
-        const fileName = path.basename(urlPath) || `audio_${Date.now()}.mp3`; 
-        // --> Provides unique file name if parsing basename isn't possible
-        
-        console.log(fileName);
-
         // if (!isValidAudioFile(fileName)) {
         //     const defaultFileName = fileName.includes('.') ? fileName : `${fileName}.mp3`;
         //     const filePath = await this.downloadFromUrl(url, defaultFileName);
@@ -313,9 +309,12 @@ export class MusicCommands {
 
     handlePause(msg: Message): void {
         const result = validateAndGetConnection(msg);
-        if (!result) return;
-
-        if (this.playerManager.pause()) {
+        if (!result){ 
+            msg.reply("You aren't in the vc.") 
+            return;
+        }
+        
+        if (this.moonlinkPlayer.pause()) {
             msg.reply('Player was successfully paused');
         } else {
             msg.reply('Nothing is playing to pause');
@@ -324,9 +323,12 @@ export class MusicCommands {
 
     handleUnpause(msg: Message): void {
         const result = validateAndGetConnection(msg);
-        if (!result) return;
+         if (!result){ 
+            msg.reply("You aren't in the vc.") 
+            return;
+        }
 
-        if (this.playerManager.unpause()) {
+        if (this.moonlinkPlayer.resume()) {
             msg.reply('Song has been unpaused');
         } else {
             msg.reply('Nothing is paused');
@@ -337,15 +339,10 @@ export class MusicCommands {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
-        if (
-            this.playerManager.getStatus() === AudioPlayerStatus.Playing ||
-            this.playerManager.getStatus() === AudioPlayerStatus.Paused ||
-            this.playerManager.getStatus() === AudioPlayerStatus.AutoPaused
-        ) {
-            this.playerManager.skip();
-            msg.reply('Song skipped!');
+        if (!(this.moonlinkPlayer.playing && this.moonlinkPlayer.paused)) {
+            msg.reply('Nothing is playing')
         } else {
-            msg.reply('Nothing is playing');
+            this.moonlinkPlayer.skip();
         }
     }
 
@@ -353,16 +350,10 @@ export class MusicCommands {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
-        const status = this.playerManager.getStatus();
-        if (
-            status === AudioPlayerStatus.Playing ||
-            status === AudioPlayerStatus.Paused ||
-            status === AudioPlayerStatus.AutoPaused
-        ) {
-            this.playerManager.setLoop(true);
-            msg.reply('Song is now looping!');
+        if (!(this.moonlinkPlayer.playing && this.moonlinkPlayer.paused)) {
+            msg.reply('Nothing is playing')
         } else {
-            msg.reply('Nothing is playing...');
+            this.moonlinkPlayer.setLoop('track');
         }
     }
 
@@ -370,16 +361,10 @@ export class MusicCommands {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
-        const status = this.playerManager.getStatus();
-        if (
-            status === AudioPlayerStatus.Playing ||
-            status === AudioPlayerStatus.Paused ||
-            status === AudioPlayerStatus.AutoPaused
-        ) {
-            this.playerManager.setLoop(false);
-            msg.reply('Song has stopped looping!');
+        if (!(this.moonlinkPlayer.playing && this.moonlinkPlayer.paused)) {
+            msg.reply('Nothing is playing')
         } else {
-            msg.reply('Nothing is playing...');
+            this.moonlinkPlayer.setLoop('off');
         }
     }
 
