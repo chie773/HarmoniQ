@@ -339,10 +339,11 @@ export class MusicCommands {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
-        if (!(this.moonlinkPlayer.playing && this.moonlinkPlayer.paused)) {
-            msg.reply('Nothing is playing')
-        } else {
+        if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
             this.moonlinkPlayer.skip();
+            this.moonlinkPlayer.setLoop('off');
+        } else {
+            msg.reply('Nothing is playing');
         }
     }
 
@@ -350,10 +351,11 @@ export class MusicCommands {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
-        if (!(this.moonlinkPlayer.playing && this.moonlinkPlayer.paused)) {
-            msg.reply('Nothing is playing')
-        } else {
+        if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
             this.moonlinkPlayer.setLoop('track');
+            msg.reply("Looping Track");
+        } else {
+            msg.reply("Nothing is playing :P");
         }
     }
 
@@ -361,10 +363,11 @@ export class MusicCommands {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
-        if (!(this.moonlinkPlayer.playing && this.moonlinkPlayer.paused)) {
-            msg.reply('Nothing is playing')
-        } else {
+        if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
             this.moonlinkPlayer.setLoop('off');
+            msg.reply("Loop is turned off")
+        } else {
+            msg.reply('Nothing is playing')
         }
     }
 
