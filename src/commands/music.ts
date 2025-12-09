@@ -71,7 +71,7 @@ export class MusicCommands {
             } else {
                 this.moonlinkPlayer.queue.add(result.tracks[0]);
                 msg.reply(`${result.tracks[0].title} has been added to the queue!`);
-                if (!this.moonlinkPlayer.playing){
+                if (!this.moonlinkPlayer.playing || !this.moonlinkPlayer.paused){
                   this.moonlinkPlayer.play();
                     
                   msg.reply(`Playing ${result.tracks[0].title}`);
@@ -146,7 +146,7 @@ export class MusicCommands {
                 
                 this.moonlinkPlayer.queue.add(result.tracks[0]);
                 msg.reply(`**${song.title}** has been added to the queue!`);
-                if (!this.moonlinkPlayer.playing){
+                if (!this.moonlinkPlayer.playing && !this.moonlinkPlayer.paused){
                   this.moonlinkPlayer.play();
                     
                   msg.reply(`~Playing Now: **${song.title}**~`);
@@ -191,7 +191,8 @@ export class MusicCommands {
                 return;
             } else {
                 this.moonlinkPlayer.queue.add(results.tracks[0]);
-                if (!this.moonlinkPlayer.playing){
+                msg.reply(`**${results.tracks[0].title}** has been added to the queue!`);
+                if (!this.moonlinkPlayer.playing && !this.moonlinkPlayer.paused){
                   this.moonlinkPlayer.play();
                     
                   msg.reply('PLaying ur noob song');
@@ -294,13 +295,16 @@ export class MusicCommands {
     }
 
     private async handleQueuePlay(msg: Message, connection: VoiceConnection): Promise<void> {
-        if (this.queue.isEmpty()) {
-            msg.reply('Please attach an audio file to play or provide a file path/URL!');
+        if (!this.isCreated){
+            this.createMoonlinkPlayer(msg);
+        }
+        if (this.moonlinkPlayer.queue.isEmpty()) {
+            msg.reply('Please Tell Me what song you want to play!');
             return;
         }
 
-        if (this.playerManager.isIdle()) {
-            this.playerManager.play(connection, msg.guild!.id);
+        if (this.moonlinkPlayer.idle) {
+            this.moonlinkPlayer.play();
             msg.reply('~Playing from queue~');
         } else {
             msg.reply('Song is already playing! Use !skip to skip the current song.');
