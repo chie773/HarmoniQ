@@ -585,7 +585,7 @@ export class MusicCommands {
         }
     }
 
-    handleSeek(msg: Message, seconds: string[]): void {
+    rhandleSeek(msg: Message, seconds: string[]): void {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
@@ -603,13 +603,26 @@ export class MusicCommands {
                     return;
                 }
 
-                this.moonlinkPlayer.seek(time);
+                let xMin, xSec, yMin, ySec;
 
-                if (time > 0) {
-                    msg.reply(`Song has fast-fowarded ${time/1000} seconds.`);
-                } else {
-                    msg.reply(`Song has rewinded ${time/1000} seconds.`);
-                }
+                xMin = this.moonlinkPlayer.current.position / 6000;
+                xSec = this.moonlinkPlayer.current.time - (xMin*6000);
+                xSec = xSec / 1000;
+
+                yMin = this.moonlinkPlayer.current.duration / 6000;
+                ySec = this.moonlinkPlayer.current.duration - (yMin*6000);
+                ySec = ySec / 1000;
+
+
+                let currentTime = `${xMin}:${xSec}`;
+                let currentDuration = `${yMin}:${ySec}`;
+
+            
+
+                let toString = `Current Runtime:\n${currentTime} // ${currentDuration}\n`
+                
+                this.moonlinkPlayer.seek(time);
+                
             } else {    
                 msg.reply(`Unable to seek, L + Ratio + you Sux`);
             }
@@ -622,7 +635,66 @@ export class MusicCommands {
     }
 
 
+    handleSeek(msg: Message, seconds: string[]) {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
 
+        const connection = getVoiceConnection(msg.guild!.id);
+        
+        if (!connection) {
+            msg.reply(`I'm not in a voice channel!`);
+            return;
+        }
+        
+        try {
+            if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
+                const seekAmount = parseInt(seconds.join(" "), 10);
+                if (isNaN(seekAmount) || seekAmount === 0){
+                    // TODO: add err msg here
+                    return;
+                }
+                
+                const currPosition = this.moonlinkPlayer.current.position;
+                const songDuration = this.moonlinkPlayer.current.duration;
+                const newPosition = (seekAmount * 1000) + currPosition;
+
+                if (newPosition >= songDuration) {
+                    // TODO: message for skipping
+                    // check if we really need async here, ill let you handle that jit
+                    if (this.moonlinkPlayer.loop === 'track'){
+                        this.moonlinkPlayer.seek(0);
+                        return;
+                    } else {
+                        this.moonlinkPlayer.skip();
+                        return;
+                    }
+                }
+                
+                if (newPosition <= 0) {
+                    if (this.moonlinkPlayer.loop === 'track'){
+                        this.moonlinkPlayer.seek(0);
+                        return;
+                    } else {
+                        this.moonlinkPlayer.seek(0);
+                        return;
+                    }
+                }
+
+                this.moonlinkPlayer.seek(newPosition);
+                
+                if (seekAmount > 0) {
+                    msg.reply(`Fast Forward by ${seekAmount}`);
+                } else {
+                    msg.reply(`Went back by ${seekAmount}`);
+                }
+            } else {
+                msg.reply("nothing to play jit");
+            }
+        } catch (e) {
+            console.log(e);
+            msg.reply('Command not availiable right now, try again later!');
+        }
+    }
 
 
 
