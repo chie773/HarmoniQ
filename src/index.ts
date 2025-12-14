@@ -1,9 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Handles main functions of the 
-
-
 import { Client, GatewayIntentBits } from 'discord.js';
 import { getVoiceConnection } from '@discordjs/voice';
 import { fileURLToPath } from 'url';
@@ -129,7 +126,7 @@ process.on('SIGTERM', async () => {
 });
 
 
-if (!process.env.TOKEN) {
+if (!process.env.DISCORD_TOKEN) {
     console.error('ERROR: TOKEN environment variable is not set!');
     process.exit(1);
 }
@@ -141,15 +138,4 @@ client.login(process.env.TOKEN).catch((err) => {
 
 export { client };
 
-
-
-
-const myFunction= (name:string,age:number ) =>{ 
-console.log("Hello, " + name+ "! You are " + age+ " years old." );
-
-let unusedVariable = 42 // Unused variable (ESLint should warn about this)
-
-return{name: name, age:age}
-}
-
-console.log(myFunction( "Alice",25)) // Incorrect spacing, missing semicolon, inconsistent quotes
+console.log("HarmoniQ Server Starting...");
