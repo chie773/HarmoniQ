@@ -1,5 +1,5 @@
 import { Attachment, Message } from 'discord.js';
-import { AudioPlayerStatus, VoiceConnection } from '@discordjs/voice';
+import { AudioPlayerStatus, getVoiceConnection, VoiceConnection } from '@discordjs/voice';
 import { AudioPlayerManager } from '../audio/player.ts';
 import { Queue } from '../audio/queue.ts';
 import { validateAndGetConnection } from '../utils/voiceChannel.ts';
@@ -8,7 +8,8 @@ import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import { client } from '../index.ts';
-import { Manager, Player } from 'moonlink.js';
+import { Manager, Player, Track } from 'moonlink.js';
+import { stringify } from 'querystring';
 
 
 export class MusicCommands {
@@ -44,7 +45,10 @@ export class MusicCommands {
             await this.handleFileInput(msg, string, connection);
             return;
         } else {
-            await this.handleQueuePlay(msg, connection);
+            msg.reply("Please attach an audio file or state what you want to play");
+            return
+            await this.handleQueuePlay(msg, connection); // --> Crashes
+
         }
 
     }
@@ -71,7 +75,7 @@ export class MusicCommands {
             } else {
                 this.moonlinkPlayer.queue.add(result.tracks[0]);
                 msg.reply(`${result.tracks[0].title} has been added to the queue!`);
-                if (!this.moonlinkPlayer.playing || !this.moonlinkPlayer.paused){
+                if (!(this.moonlinkPlayer.playing || this.moonlinkPlayer.paused)){ // What am i trying to do? If the player is playing or paused, queue the next song and dont change player state
                   this.moonlinkPlayer.play();
                     
                   msg.reply(`Playing ${result.tracks[0].title}`);
@@ -317,6 +321,12 @@ export class MusicCommands {
             msg.reply("You aren't in the vc.") 
             return;
         }
+        const connection = getVoiceConnection(msg.guild!.id);
+
+        if (!connection) {
+            msg.reply("I'm not in a voice channel!");
+            return;
+        }
         
         if (this.moonlinkPlayer.pause()) {
             msg.reply('Player was successfully paused');
@@ -331,6 +341,12 @@ export class MusicCommands {
             msg.reply("You aren't in the vc.") 
             return;
         }
+        const connection = getVoiceConnection(msg.guild!.id);
+
+        if (!connection) {
+            msg.reply("I'm not in a voice channel!");
+            return;
+        }
 
         if (this.moonlinkPlayer.resume()) {
             msg.reply('Song has been unpaused');
@@ -339,13 +355,21 @@ export class MusicCommands {
         }
     }
 
-    handleSkip(msg: Message): void {
+    async handleSkip(msg: Message): Promise<void> {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
+        const connection = getVoiceConnection(msg.guild!.id);
+
+        if (!connection) {
+            msg.reply("I'm not in a voice channel!");
+            return;
+        }
+
         if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
-            this.moonlinkPlayer.skip();
+            await this.moonlinkPlayer.skip();
             this.moonlinkPlayer.setLoop('off');
+            this.handleCurrentSong(msg);
         } else {
             msg.reply('Nothing is playing');
         }
@@ -354,6 +378,13 @@ export class MusicCommands {
     handleLoop(msg: Message): void {
         const result = validateAndGetConnection(msg);
         if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+
+        if (!connection) {
+            msg.reply("I'm not in a voice channel!");
+            return;
+        }
 
         if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
             this.moonlinkPlayer.setLoop('track');
@@ -367,6 +398,13 @@ export class MusicCommands {
         const result = validateAndGetConnection(msg);
         if (!result) return;
 
+        const connection = getVoiceConnection(msg.guild!.id);
+
+        if (!connection) {
+            msg.reply("I'm not in a voice channel!");
+            return;
+        }
+
         if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
             this.moonlinkPlayer.setLoop('off');
             msg.reply("Loop is turned off")
@@ -374,6 +412,298 @@ export class MusicCommands {
             msg.reply('Nothing is playing')
         }
     }
+
+    handleViewQueue(msg: Message): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+        
+        const connection = getVoiceConnection(msg.guild!.id);
+
+        if (!connection) {
+            msg.reply("I'm not in a voice channel!");
+            return;
+        }
+
+        try {
+            const replyMsg = `Now Playing: ${this.moonlinkPlayer.current.title ?? "Nothing at the moment"}\n\nThis are the songs currently in the queue:\n`;
+            if (!this.moonlinkPlayer.queue.isEmpty) {
+                let pos = 0;
+
+                const queueList = this.moonlinkPlayer.queue.tracks
+                                            .map((track: Track, idx: number) => `${idx}. ${track.title}`)
+                                            .join("\n");
+
+                msg.reply(replyMsg + queueList);
+            } else {
+                msg.reply(replyMsg + `1. There is nothing in the queue, please add something :)`);
+            }
+        } catch (e) {
+            console.log(e)
+            msg.reply(`Unable to execute command, please try again later`);
+            return;
+        }
+    }
+
+    handleSongDuration(msg: Message): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+
+        if (!connection) {
+            msg.reply(`I'm not in a voice channel!`);
+            return;
+        }
+
+        if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
+            
+            const songDuration = this.moonlinkPlayer.current.duration;
+            
+            const Minutes = songDuration / 6000;
+            // Song Duration -> Conver to minutes
+            // Remove How many minutes (Minutes - SongDuration)
+            // Song Duration -> Convert to Seconds
+            
+
+
+            const Seconds = ((Minutes * 6000) -  songDuration) / 1000;
+            
+            msg.reply(`Current Song Duration:\n${Minutes} : ${Seconds}`);
+        }  
+        else {
+            msg.reply(`Nothing is playing. Add a song!`);
+        }
+    }
+
+    handleShuffleQueue(msg: Message): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+        if (!connection) {
+            msg.reply(`I'm not in a voice channel!`);
+            return;
+        }
+
+        if (this.moonlinkPlayer.queue.shuffle()) {
+            msg.reply(`The queue has been shuffled! Enjoy listening!`);
+        }
+        else {
+            msg.reply('Unable to shuffle queue, please try again.');
+        }
+    }
+
+    handleClearQueue(msg: Message): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+        if (!connection) {
+            msg.reply(`I'm not in a voice channel!`);
+            return;
+        }
+
+        if (this.moonlinkPlayer.queue.clear()) {
+            msg.reply(`The queue has been cleared. Add new songs to the queue.`);
+        } else {
+            msg.reply('Unable to clear queue, please try again.');
+        }
+    }
+
+    handleRemoveFromQueue(msg: Message, url: string[]): void {
+        try{ 
+            const result = validateAndGetConnection(msg);
+            if (!result) return;
+    
+            const connection = getVoiceConnection(msg.guild!.id);
+            if (!connection) {
+                msg.reply(`I'm not in a voice channel!`);
+                return;
+            }
+    
+            const string = url.join(" ");
+            const position = parseInt(string);
+            
+            if (position > this.moonlinkPlayer.queue.size) {
+                msg.reply(`The requested position in the queue doesn't exist.`);
+                return;
+            }
+            
+            const songName = this.moonlinkPlayer.queue.get(position - 1);
+            console.log(position - 1); 
+    
+            if(!this.moonlinkPlayer.queue.isEmpty){
+                this.moonlinkPlayer.queue.remove(position - 1);
+                msg.reply(`${songName.title} has been removed from the queue!`);
+            }
+        } catch (e) {
+            console.log(e);
+            msg.reply("hey this broke, chi go fix you geek")
+        }
+    }
+
+    handleSkipTo(msg: Message, songNumber: string): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+        
+        if (!connection) {
+            msg.reply(`I'm not in a voice channel!`);
+            return;
+        }
+
+        try {
+            const songPosition = parseInt(songNumber, 10);
+            if (this.moonlinkPlayer.queue.SkipTo(songPosition)) {
+                msg.reply(`Successfully skipped to ${this.moonlinkPlayer.queue.track.title}`);
+                this.handleCurrentSong(msg);
+            } else {
+                msg.reply(`Unable to skip to requested Song Position, Please try again.`);
+            }
+        } catch (e) {
+            console.log(e);
+            msg.reply(`Unable to skip to song, Please Try Again.`);
+        }
+    }
+
+    handleCurrentSong(msg: Message): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+        
+        if (!connection) {
+            msg.reply(`I'm not in a voice channel!`);
+            return;
+        }
+
+        if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
+            msg.reply(`Currently Playing: ${this.moonlinkPlayer.current.title}`);
+        } else {
+            msg.reply(`Can't display current song OR nothing is playing. Please try again`);
+        }
+    }
+
+    rhandleSeek(msg: Message, seconds: string[]): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+        
+        if (!connection) {
+            msg.reply(`I'm not in a voice channel!`);
+            return;
+        }
+        
+        try{
+            if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
+                let time = parseInt(seconds.join(' '), 10) * 1000;
+                if (time === 0) {
+                    return;
+                }
+
+                let xMin, xSec, yMin, ySec;
+
+                xMin = this.moonlinkPlayer.current.position / 6000;
+                xSec = this.moonlinkPlayer.current.time - (xMin*6000);
+                xSec = xSec / 1000;
+
+                yMin = this.moonlinkPlayer.current.duration / 6000;
+                ySec = this.moonlinkPlayer.current.duration - (yMin*6000);
+                ySec = ySec / 1000;
+
+
+                let currentTime = `${xMin}:${xSec}`;
+                let currentDuration = `${yMin}:${ySec}`;
+
+            
+
+                let toString = `Current Runtime:\n${currentTime} // ${currentDuration}\n`
+                
+                this.moonlinkPlayer.seek(time);
+                
+            } else {    
+                msg.reply(`Unable to seek, L + Ratio + you Sux`);
+            }
+        } catch (e) {
+            console.log(e);
+            msg.reply('Why dont you work :CCCCCC');
+        }
+        
+
+    }
+
+
+    handleSeek(msg: Message, seconds: string[]) {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+        
+        if (!connection) {
+            msg.reply(`I'm not in a voice channel!`);
+            return;
+        }
+        
+        try {
+            if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
+                const seekAmount = parseInt(seconds.join(" "), 10);
+                if (isNaN(seekAmount) || seekAmount === 0){
+                    // TODO: add err msg here
+                    return;
+                }
+                
+                const currPosition = this.moonlinkPlayer.current.position;
+                const songDuration = this.moonlinkPlayer.current.duration;
+                const newPosition = (seekAmount * 1000) + currPosition;
+
+                if (newPosition >= songDuration) {
+                    // TODO: message for skipping
+                    // check if we really need async here, ill let you handle that jit
+                    if (this.moonlinkPlayer.loop === 'track'){
+                        this.moonlinkPlayer.seek(0);
+                        return;
+                    } else {
+                        this.moonlinkPlayer.skip();
+                        return;
+                    }
+                }
+                
+                if (newPosition <= 0) {
+                    if (this.moonlinkPlayer.loop === 'track'){
+                        this.moonlinkPlayer.seek(0);
+                        return;
+                    } else {
+                        this.moonlinkPlayer.seek(0);
+                        return;
+                    }
+                }
+
+                this.moonlinkPlayer.seek(newPosition);
+                
+                if (seekAmount > 0) {
+                    msg.reply(`Fast Forward by ${seekAmount}`);
+                } else {
+                    msg.reply(`Went back by ${seekAmount}`);
+                }
+            } else {
+                msg.reply("nothing to play jit");
+            }
+        } catch (e) {
+            console.log(e);
+            msg.reply('Command not availiable right now, try again later!');
+        }
+    }
+
+
+
+    //SkipTo (use queue.jump(x))
+    
+
+
+
+
 
     createMoonlinkPlayer(msg: Message): void {
         const result = validateAndGetConnection(msg);

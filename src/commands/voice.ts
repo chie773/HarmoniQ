@@ -2,18 +2,25 @@ import { Message } from 'discord.js';
 import { joinVoiceChannel, getVoiceConnection } from '@discordjs/voice';
 import { validateVoiceChannel, getOrCreateConnection } from '../utils/voiceChannel.ts';
 import { client } from '../index.ts';
+import { Player } from 'moonlink.js';
 
 export function handleJoin(msg: Message): void {
     const voiceChannel = validateVoiceChannel(msg);
     if (!voiceChannel) return;
-
-    const connection = getOrCreateConnection(voiceChannel);
-    if (!connection) {
-        msg.reply('I\'m currently in another voice channel. Please try again later.');
+    
+    if (!msg.guildId){
         return;
     }
 
-    msg.reply(`Joined **${voiceChannel.name}**`);
+    const moonlinkPlayer = client.manager.players.get(msg.guildId);
+    if (moonlinkPlayer && moonlinkPlayer.voiceChannelId) {
+        moonlinkPlayer.connect();
+        msg.reply(`Joined **${voiceChannel.name}**`);
+    } else {
+        msg.reply(`Unable to join, try playing a song instead and I may find my way in ~.~`);
+    }
+
+    return;
 }
 
 export function handleLeave(msg: Message): void {
