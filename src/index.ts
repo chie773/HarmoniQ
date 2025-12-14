@@ -127,15 +127,20 @@ process.on('SIGTERM', async () => {
 
 
 if (!process.env.DISCORD_TOKEN) {
-    console.error('ERROR: TOKEN environment variable is not set!');
+    console.error('ERROR: DISCORD_TOKEN environment variable is not set!');
     process.exit(1);
 }
 
-client.login(process.env.TOKEN).catch((err) => {
-    console.error('Failed to login:', err);
+if (!process.env.YT_API_KEY) {
+    console.error('ERROR: YT_API_KEY environment variable is not set!');
     process.exit(1);
-});
+}
 
 export { client };
 
 console.log("HarmoniQ Server Starting...");
+
+client.login(process.env.DISCORD_TOKEN).catch((err) => {
+    console.error('Failed to login:', err);
+    process.exit(1);
+});
