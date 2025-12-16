@@ -51,6 +51,7 @@ export class CommandRouter {
                 this.handleHello(msg);
                 break;
 
+            case '?help':
             case '!help':
                 const helpMessage = `
                     **Available Commands**
@@ -80,6 +81,21 @@ export class CommandRouter {
                 • \`!skipTo <index>\` — Skips to a specific song in the queue  
                 • \`!seek <time>\` — Seeks to a timestamp in the current song
                 
+                **Audio Mix & Effects**
+                • \`!volume <0-100>\` — Sets the volume level
+                • \`!rock\` — Applies Rock EQ preset
+                • \`!bassboost\` — Applies Bass Boost EQ preset
+                • \`!pop\` — Applies Pop EQ preset
+                • \`!jazz\` — Applies Jazz EQ preset
+                • \`!deep\` — Applies Deep EQ preset
+                • \`!flat\` — Applies Flat EQ preset
+                • \`!hiphop\` — Applies Hip-Hop EQ preset
+                • \`!classical\` — Applies Classical EQ preset
+                • \`!spokenword\` — Applies Spoken Word EQ preset
+                • \`!2x\` — Sets playback speed to 2x
+                • \`!0.5x / !.5x\` — Sets playback speed to 0.5x
+                • \`!8d\` — Applies 8D audio effect
+
                 `;
 
                 msg.reply(helpMessage);
@@ -102,9 +118,15 @@ export class CommandRouter {
             case '!loop':
                 this.musicCommands.handleLoop(msg);
                 break;
+
+            case 'qloop':
+                this.musicCommands.handleQueueLoop(msg);
+                break;
+                     
             case '!unloop':
                 this.musicCommands.handleStopLoop(msg);
                 break;
+            
 
             case '!skip':
                 this.musicCommands.handleSkip(msg);
@@ -116,7 +138,7 @@ export class CommandRouter {
 
             case '!q':
             case '!queue':
-                this.musicCommands.handleViewQueue(msg);
+                this.musicCommands.handleViewQueue(msg, args);
                 break;
 
             case '!duration':
