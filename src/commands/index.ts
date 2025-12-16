@@ -4,13 +4,18 @@ import { MusicCommands } from './music.js';
 import { AudioPlayerManager } from '../audio/player.js';
 import { Queue } from '../audio/queue.js';
 import { AudioMixCommands } from './audiomix.js';
+import { validateAndGetConnection } from '../utils/voiceChannel.js';
+import { client } from '../index.js';
+import { Player } from 'moonlink.js';
+import { MockPropertyContext } from 'node:test';
 
 
 
 export class CommandRouter {
     private musicCommands: MusicCommands;
     private audioMixOn: any;
-    private audioMixCommands: any;
+    private audioMixCommands: AudioMixCommands;
+    moonlinkPlayer: any;
 
     constructor(
         playerManager: AudioPlayerManager,
@@ -18,22 +23,14 @@ export class CommandRouter {
         tempDir: string
     ) {
         this.musicCommands = new MusicCommands(playerManager, queue, tempDir);
+        this.audioMixCommands = new AudioMixCommands(this.moonlinkPlayer);
     }
-
-    private ensureAudioMixCommands(msg: Message): boolean {
-        const player = this.musicCommands.getMoonlinkPlayer();
-        if (!player) {
-            msg.reply('No active player! Play a song first.');
-            return false;
-        }
-        if (!this.audioMixCommands) {
-            this.audioMixCommands = new AudioMixCommands(player);
-        }
-        return true;
-    }
-
+    
     async route(msg: Message): Promise<void> {
-        
+        this.createMoonlinkPlayer(msg)
+        this.musicCommands.setMoonlinkPlayer(this.moonlinkPlayer);
+        this.audioMixCommands = new AudioMixCommands(this.moonlinkPlayer);
+
         if (msg.author.bot) return;
 
         const args = msg.content.trim().split(/ +/);
@@ -51,65 +48,47 @@ export class CommandRouter {
                 break;
 
             case 'hello':
-
                 this.handleHello(msg);
                 break;
-            
-            case '?help':
+
             case '!help':
                 const helpMessage = `
                     **Available Commands**
 
-                    🎧 **Voice**
-                    • \`!join\` — Makes the bot join your current voice channel (Use play instead, bot auto joins)
-                    • \`!leave\` — Disconnects the bot from the voice channel
+                🎧 **Voice**
+                • \`!join\` — Makes the bot join your current voice channel (Use play instead, bot auto joins)  
+                • \`!leave\` — Disconnects the bot from the voice channel  
 
-                    💬 **Utility**
-                    • \`!echo <message>\` — Repeats the provided message
-                    • \`hello\` — Sends a greeting from the bot
-
-                    🎵 **Music**
-                    • \`!play / !add <mp3 file || url || playlist>\` — Plays a song, URL, or YouTube playlist (max 50 songs)
-                    • \`!stop\` — Stops playback of current song
-                    • \`!pause\` — Pauses the current song
-                    • \`!resume\` — Resumes the paused song
-                    • \`!skip\` — Skips the current song
-                    • \`!loop\` — Loops the current song
-                    • \`!unloop\` — Disables looping
-                    • \`!queue / !q [start]\` — Displays the queue (optionally from a starting index)
-                    • \`!current\` — Shows the currently playing song
-                    • \`!duration\` — Shows the duration of the current song
-                    • \`!shuffle\` — Shuffles the queue
-                    • \`!remove <index>\` — Removes a song from the queue
-                    • \`!clear\` — Clears the entire queue
-                    • \`!skipTo <index>\` — Skips to a specific song in the queue
-                    • \`!seek <seconds>\` — Seeks forward/backward in the current song
-
-                    🎚️ **Audio Mix & Effects**
-                    • \`!volume <0-100>\` — Sets the volume level
-                    • \`!rock\` — Applies Rock EQ preset
-                    • \`!bassboost\` — Applies Bass Boost EQ preset
-                    • \`!pop\` — Applies Pop EQ preset
-                    • \`!jazz\` — Applies Jazz EQ preset
-                    • \`!deep\` — Applies Deep EQ preset
-                    • \`!flat\` — Applies Flat EQ preset
-                    • \`!hiphop\` — Applies Hip-Hop EQ preset
-                    • \`!classical\` — Applies Classical EQ preset
-                    • \`!spokenword\` — Applies Spoken Word EQ preset
-                    • \`!2x\` — Sets playback speed to 2x
-                    • \`!0.5x / !.5x\` — Sets playback speed to 0.5x
-                    • \`!8d\` — Applies 8D audio effect
-                    • \`!clearfilters\` — Removes all audio filters
-
-                    `;
+                💬 **Utility**
+                • \`!echo <message>\` — Repeats the provided message  
+                • \`hello\` — Sends a greeting from the bot  
+                
+                🎵 **Music**
+                • \`!play / !add <song>\` — Adds a song to the queue and starts playback  
+                • \`!stop\` — Stops playback of current song
+                • \`!pause\` — Pauses the current song  
+                • \`!resume\` — Resumes the paused song  
+                • \`!skip\` — Skips the current song  
+                • \`!loop\` — Loops the current song or queue  
+                • \`!unloop\` — Disables looping  
+                • \`!queue / !q\` — Displays the current queue  
+                • \`!current\` — Shows the currently playing song  
+                • \`!duration\` — Shows the duration of the current song  
+                • \`!shuffle\` — Shuffles the queue  
+                • \`!remove <index>\` — Removes a song from the queue  
+                • \`!clear\` — Clears the entire queue  
+                • \`!skipTo <index>\` — Skips to a specific song in the queue  
+                • \`!seek <time>\` — Seeks to a timestamp in the current song
+                
+                `;
 
                 msg.reply(helpMessage);
                 break;
 
             case '!add':
             case '!play':
+            case '!p':
                 await this.musicCommands.handlePlay(msg, args);
-                this.audioMixCommands = new AudioMixCommands(this.musicCommands.getMoonlinkPlayer());
                 break;
 
             case '!pause':
@@ -130,13 +109,18 @@ export class CommandRouter {
             case '!skip':
                 this.musicCommands.handleSkip(msg);
                 break;
+            
+            case '!qskip':
+                this.musicCommands.handleSkipTo(msg, args);
+                break;
 
             case '!q':
             case '!queue':
-                this.musicCommands.handleViewQueue(msg, args);
+                this.musicCommands.handleViewQueue(msg);
                 break;
 
             case '!duration':
+            case '!d':
                 this.musicCommands.handleSongDuration(msg);
                 break;
 
@@ -149,11 +133,8 @@ export class CommandRouter {
                 break;
 
             case '!remove':
+            case '!r':
                 this.musicCommands.handleRemoveFromQueue(msg, args);
-                break;
-
-            case '!skipTo':
-                this.musicCommands.handleSkipTo(msg, args[0]);
                 break;
 
             case '!current':
@@ -168,78 +149,67 @@ export class CommandRouter {
                 break;
 
             case '!volume':
-                if (!this.ensureAudioMixCommands(msg)) break;
-                const volume = parseInt(args[0], 10);
+            case '!v':
+        // expects args[0] to be the volume number
+            const volume = parseInt(args[0], 10);
                 this.audioMixCommands.setVolume(msg, volume);
-                break;
+            break;
 
             case '!rock':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setRock(msg);
                 break;
 
             case '!bassboost':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setBassBoost(msg);
                 break;
 
             case '!pop':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setPop(msg);
                 break;
 
             case '!jazz':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setJazz(msg);
                 break;
 
             case '!deep':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setDeep(msg);
                 break;
 
             case '!flat':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setFlat(msg);
                 break;
 
             case '!hiphop':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setHipHop(msg);
                 break;
 
             case '!classical':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setClassical(msg);
                 break;
 
             case '!spokenword':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setSpokenWord(msg);
                 break;
 
             case '!2x':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setSpeed2x(msg);
                 break;
 
             case '!0.5x':
             case '!.5x':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.setSpeedHalf(msg);
                 break;
 
             case '!8d':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.set8DAudio(msg);
                 break;
 
             case '!clearfilters':
-                if (!this.ensureAudioMixCommands(msg)) break;
                 this.audioMixCommands.clearFilters(msg);
                 break;    
 
             default:
+                console.log(`Uknown Command`);
             // ignore
         }
     }
@@ -254,5 +224,26 @@ export class CommandRouter {
 
     private handleHello(msg: Message): void {
         msg.reply('hello');
+    }
+    
+    createMoonlinkPlayer(msg: Message): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return ;
+
+        const { voiceChannel, connection } = result;
+
+        const channelId = connection.joinConfig.channelId;
+        if (!channelId) {
+            msg.reply('Unable to get voice channel ID from connection.');
+            return;
+        } //Javascript can see if you null check your variables (Thats actually pretty cool)
+
+        this.moonlinkPlayer = client.manager.createPlayer({
+                guildId: connection.joinConfig.guildId,
+                voiceChannelId: channelId,
+                textChannelId: msg.channel.id,
+                autoPlay: false,
+                volume: 10
+        });
     }
 }

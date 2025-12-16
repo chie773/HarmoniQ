@@ -8,16 +8,14 @@ import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import { client } from '../index.ts';
-import { Manager, Player } from 'moonlink.js';
+import { Manager, Player, Track } from 'moonlink.js';
 import { stringify } from 'querystring';
-import { isYouTubePlaylistUrl, extractPlaylistId, getPlaylistVideoTitles } from './youtube.ts';
 
 
 export class MusicCommands {
-    private moonlinkPlayer: any;
     private isCreated = false;
     constructor(
-        private playerManager: AudioPlayerManager,
+        private moonlinkPlayer: any,
         private queue: Queue,
         private tempDir: string, 
     ) {}
@@ -32,9 +30,6 @@ export class MusicCommands {
 
         const { voiceChannel, connection } = result;
 
-        if (!this.isCreated){
-            this.createMoonlinkPlayer(msg);
-        }
 
         const attachment = msg.attachments.first();
 
@@ -46,10 +41,8 @@ export class MusicCommands {
             await this.handleFileInput(msg, string, connection);
             return;
         } else {
-            msg.reply("Please attach an audio file or state what you want to play");
-            return
             await this.handleQueuePlay(msg, connection); // --> Crashes
-
+            return;
         }
 
     }
@@ -120,11 +113,6 @@ export class MusicCommands {
             await this.handleUrlInput(msg, input, connection);
             return;
         }
-
-        if (!this.isCreated){
-            this.createMoonlinkPlayer(msg);
-        }
-
         // const filePath = path.resolve(input);
         // if (!fileExists(filePath)) {
         //     msg.reply('File not found! Please provide a valid file path or URL.');
@@ -173,10 +161,8 @@ export class MusicCommands {
         url: string,
         connection: VoiceConnection
     ): Promise<void> {
-        if (isYouTubePlaylistUrl(url)) {
-            await this.handlePlaylistInput(msg, url, connection);
-            return;
-        }
+        const urlPath =  new URL(url).pathname;
+        // Check to see if its a youtube or soundcloud link.
 
         const channelId = connection.joinConfig.channelId;
         if (!channelId) {
@@ -280,9 +266,7 @@ export class MusicCommands {
     }
 
     private async handleQueuePlay(msg: Message, connection: VoiceConnection): Promise<void> {
-        if (!this.isCreated){
-            this.createMoonlinkPlayer(msg);
-        }
+
         if (this.moonlinkPlayer.queue.isEmpty()) {
             msg.reply('Please Tell Me what song you want to play!');
             return;
@@ -396,6 +380,29 @@ export class MusicCommands {
         }
     }
 
+    handleQueueLoop(msg:Message): void {
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const connection = getVoiceConnection(msg.guild!.id);
+
+        if (!connection) {
+            msg.reply("I'm not in a voice channel!");
+            return;
+        }
+
+        if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
+            if (!this.moonlinkPlayer.queue.isEmpty){
+                this.moonlinkPlayer.setLoop('queue');
+                msg.reply("Looping Track");
+            } else {
+                msg.reply(`Queue is empty, there's nothing to loop.`);
+            }
+        } else {
+            msg.reply("Nothing is playing :P");
+        }
+    }
+
     handleStopLoop(msg: Message): void {
         const result = validateAndGetConnection(msg);
         if (!result) return;
@@ -415,10 +422,10 @@ export class MusicCommands {
         }
     }
 
-    handleViewQueue(msg: Message, args: string[]): void {
+    handleViewQueue(msg: Message): void {
         const result = validateAndGetConnection(msg);
         if (!result) return;
-
+        
         const connection = getVoiceConnection(msg.guild!.id);
 
         if (!connection) {
@@ -427,34 +434,17 @@ export class MusicCommands {
         }
 
         try {
-            const startIndex = args.length > 0 ? parseInt(args[0], 10) : 0;
-            const isValidStart = !isNaN(startIndex) && startIndex >= 0;
-            const actualStart = isValidStart ? startIndex : 0;
-
-            const currentSong = this.moonlinkPlayer.current?.title ?? "Nothing at the moment";
-            let replyMsg = `Now Playing: ${currentSong}\n\nThese are the songs currently in the queue:\n`;
-
+            const replyMsg = `Now Playing: ${this.moonlinkPlayer.current.title ?? "Nothing at the moment"}\n\nThese are the songs currently in the queue:\n`;
             if (!this.moonlinkPlayer.queue.isEmpty) {
-                const MAX_LENGTH = 1990;
-                const BUFFER = 50;
-                const tracks = this.moonlinkPlayer.queue.tracks;
+                let pos = 0;
 
-                let queueText = '';
-                for (let i = actualStart; i < tracks.length; i++) {
-                    const trackLine = `${i}. ${tracks[i].title}\n`;
+                const queueList = this.moonlinkPlayer.queue.tracks
+                                            .map((track: Track, idx: number) => `${idx}. ${track.title}`)
+                                            .join("\n");
 
-                    if ((replyMsg + queueText + trackLine).length > (MAX_LENGTH - BUFFER)) {
-                        const remaining = tracks.length - i;
-                        queueText += `\n... and ${remaining} more song${remaining !== 1 ? 's' : ''}`;
-                        break;
-                    }
-
-                    queueText += trackLine;
-                }
-
-                msg.reply(replyMsg + queueText);
+                msg.reply(replyMsg + queueList);
             } else {
-                msg.reply(replyMsg + `There is nothing in the queue, please add something :)`);
+                msg.reply(replyMsg + `1. There is nothing in the queue, please add something :)`);
             }
         } catch (e) {
             console.log(e)
@@ -542,6 +532,11 @@ export class MusicCommands {
     
             const string = url.join(" ");
             const position = parseInt(string);
+
+            if (!position) {
+                msg.reply(`You didn't provide a valid number, try again!`);
+                return;
+            }
             
             if (position > this.moonlinkPlayer.queue.size) {
                 msg.reply(`The requested position in the queue doesn't exist.`);
@@ -561,27 +556,42 @@ export class MusicCommands {
         }
     }
 
-    async handleSkipTo(msg: Message, songNumber: string): Promise<void> {
-        const result = validateAndGetConnection(msg);
-        if (!result) return;
+    async handleSkipTo(msg: Message, songNumber: string[]): Promise<void> {
+        try{ 
+            const result = validateAndGetConnection(msg);
+            if (!result) return;
+    
+            const connection = getVoiceConnection(msg.guild!.id);
+            if (!connection) {
+                msg.reply(`I'm not in a voice channel!`);
+                return;
+            }
+    
+            const string = songNumber.join(" ");
+            const position = parseInt(string);
 
-        const connection = getVoiceConnection(msg.guild!.id);
-        
-        if (!connection) {
-            msg.reply(`I'm not in a voice channel!`);
-            return;
-        }
-
-        try {
-            const songPosition = parseInt(songNumber, 10);
-            if (await this.moonlinkPlayer.queue.jump(songPosition)) {
-                msg.reply(`Successfully skipped to ${this.moonlinkPlayer.queue.track.title}`);
-            } else {
-                msg.reply(`Unable to skip to requested Song Position, Please try again.`);
+            if (!position) {
+                msg.reply(`You didn't provide a valid number, try again!`);
+                return;
+            }
+            
+            if (position > this.moonlinkPlayer.queue.size) {
+                msg.reply(`The requested position in the queue doesn't exist.`);
+                return;
+            }
+            
+            const songName = this.moonlinkPlayer.queue.get(position - 1);
+            console.log(position); 
+    
+            if (!this.moonlinkPlayer.queue.isEmpty) {
+                this.moonlinkPlayer.queue.tracks.unshift(songName);
+                this.moonlinkPlayer.queue.remove(position);
+                await this.moonlinkPlayer.skip();
+                msg.reply(`Successfully skipped to ${songName.title}`);
             }
         } catch (e) {
             console.log(e);
-            msg.reply(`Unable to skip to song, Please Try Again.`);
+            msg.reply("hey this broke, chi go fix you geek")
         }
     }
 
@@ -665,68 +675,6 @@ export class MusicCommands {
         }
     }
 
-    private async handlePlaylistInput(
-        msg: Message,
-        url: string,
-        connection: VoiceConnection
-    ): Promise<void> {
-        const playlistId = extractPlaylistId(url);
-        if (!playlistId) {
-            msg.reply('Invalid YouTube playlist URL!');
-            return;
-        }
-
-        if (!this.isCreated) {
-            this.createMoonlinkPlayer(msg);
-        }
-
-        try {
-            msg.reply('Fetching playlist...');
-
-            const videoTitles = await getPlaylistVideoTitles(playlistId);
-
-            if (videoTitles.length === 0) {
-                msg.reply('No videos found in the playlist!');
-                return;
-            }
-
-            console.log(`Found ${videoTitles.length} videos in playlist`);
-
-            this.moonlinkPlayer.connect();
-
-            let addedCount = 0;
-            for (const title of videoTitles) {
-                try {
-                    console.log(`Searching for: ${title}`);
-                    const results = await client.manager.search({ query: title });
-                    console.log(`Search results for "${title}": ${results.tracks.length} tracks found`);
-                    if (results.tracks.length > 0) {
-                        this.moonlinkPlayer.queue.add(results.tracks[0]);
-                        addedCount++;
-                    }
-                } catch (error) {
-                    console.error(`Failed to search for: ${title}`, error);
-                }
-            }
-
-            if (addedCount > 0) {
-                msg.reply(`Added ${addedCount} songs from the playlist to the queue!`);
-
-                if (!this.moonlinkPlayer.playing && !this.moonlinkPlayer.paused) {
-                    this.moonlinkPlayer.play();
-                    const currentTrack = this.moonlinkPlayer.current;
-                    if (currentTrack) {
-                        msg.reply(`~Playing Now: **${currentTrack.title}**~`);
-                    }
-                }
-            } else {
-                msg.reply('Could not find any tracks from the playlist!');
-            }
-        } catch (error) {
-            console.error('Error handling playlist:', error);
-            msg.reply('Failed to fetch playlist. Please check the URL and try again.');
-        }
-    }
 
     createMoonlinkPlayer(msg: Message): void {
         const result = validateAndGetConnection(msg);
@@ -752,6 +700,10 @@ export class MusicCommands {
 
     getMoonlinkPlayer(): Player {
         return this.moonlinkPlayer;
+    }
+
+    setMoonlinkPlayer(player: Player): void {
+        this.moonlinkPlayer = player;
     }
 
     
