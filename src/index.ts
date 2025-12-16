@@ -1,14 +1,17 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Handles main functions of the 
+
+
 import { Client, GatewayIntentBits } from 'discord.js';
 import { getVoiceConnection } from '@discordjs/voice';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
-import { Queue } from './audio/queue.ts';
-import { AudioPlayerManager } from './audio/player.ts';
-import { CommandRouter } from './commands/index.ts';
+import { Queue } from './audio/queue.js';
+import { AudioPlayerManager } from './audio/player.js';
+import { CommandRouter } from './commands/index.js';
 import { Manager } from 'moonlink.js';
 
 // Get __dirname equivalent in ES modules
@@ -43,12 +46,32 @@ declare module 'discord.js' {
     }
 }
 
+const portEnv = process.env.LAVALINK_PORT;
+const HostEnv = process.env.LAVALINK_HOST;
+
+if (!portEnv) {
+  throw new Error("PORT is not defined in .env");
+}
+
+if (!HostEnv) {
+  throw new Error("lHOST is not defined in .env");
+}
+
+const port: number = Number(portEnv);
+const host: string = String(HostEnv);
+
+if (Number.isNaN(port)) {
+  throw new Error("PORT must be a valid number");
+}
+
+
+
 client.manager = new Manager({
     nodes:[
         {
-            host: 'localhost',
-            port: 8080,
-            password: 'youshallnotpass',
+            host: HostEnv,
+            port: port,
+            password: process.env.LAVALINK_TOKEN,
             secure: false,
         },
     ],
@@ -62,9 +85,12 @@ client.manager = new Manager({
 
 
 
+
 client.on('ready', (c) => {
     console.log(`${c.user.displayName} is online!`);
     client.manager.init(c.user.id);
+    
+    
 });
 
 client.on('messageCreate', async (msg) => {
@@ -80,6 +106,7 @@ client.on('raw', (packet) => {
 // Handle node events
 client.manager.on('nodeConnected', (node) => console.log(`Node ${node.identifier} connected!`));
 client.manager.on('nodeError', (node, error) => console.error(`Node ${node.identifier} error:`, error));
+
 
 
 async function cleanup() {
@@ -127,20 +154,16 @@ process.on('SIGTERM', async () => {
 
 
 if (!process.env.DISCORD_TOKEN) {
-    console.error('ERROR: DISCORD_TOKEN environment variable is not set!');
+    console.error('ERROR: TOKEN environment variable is not set!');
     process.exit(1);
 }
-
-if (!process.env.YT_API_KEY) {
-    console.error('ERROR: YT_API_KEY environment variable is not set!');
-    process.exit(1);
-}
-
-export { client };
-
-console.log("HarmoniQ Server Starting...");
 
 client.login(process.env.DISCORD_TOKEN).catch((err) => {
     console.error('Failed to login:', err);
     process.exit(1);
 });
+
+export { client };
+
+
+
