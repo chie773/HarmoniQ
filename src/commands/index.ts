@@ -8,6 +8,7 @@ import { validateAndGetConnection } from '../utils/voiceChannel.js';
 import { client } from '../index.js';
 import { Player } from 'moonlink.js';
 import { MockPropertyContext } from 'node:test';
+import { CONFIG } from '../config.js';
 
 
 
@@ -267,7 +268,7 @@ export class CommandRouter {
                 voiceChannelId: channelId,
                 textChannelId: msg.channel.id,
                 autoPlay: false,
-                volume: 10
+                volume: CONFIG.DEFAULT_VOLUME
         });
     }
 }
