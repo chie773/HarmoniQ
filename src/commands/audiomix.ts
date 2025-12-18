@@ -7,7 +7,7 @@ import { EQPresets } from './EQPresets';
 export class AudioMixCommands {
     private player: Player; // Moonlink / Lavalink player
 
-    constructor(player: any) {
+    constructor(player: Player) {
         this.player = player;
     }
 
@@ -174,5 +174,9 @@ export class AudioMixCommands {
     clearFilters(msg: Message) {
         this.player.filters.resetFilters();
         msg.reply('All Audio filters cleared!');
+    }
+
+    setMoonlinkPlayer(player: Player): void {
+        this.player = player;
     }
 }

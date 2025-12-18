@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { CONFIG } from '../config.ts';
-import { isValidAudioFile } from '../utils/fileHandler.ts';
+import { CONFIG } from '../config.js';
+import { isValidAudioFile } from '../utils/fileHandler.js';
 
 export class Queue {
     private items: string[] = [];

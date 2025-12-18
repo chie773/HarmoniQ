@@ -154,7 +154,7 @@ process.on('SIGTERM', async () => {
 
 
 if (!process.env.DISCORD_TOKEN) {
-    console.error('ERROR: TOKEN environment variable is not set!');
+    console.error('ERROR: Lol ur not getting in buddy');
     process.exit(1);
 }
 

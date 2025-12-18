@@ -9,12 +9,13 @@ import {
     VoiceConnection,
     getVoiceConnection,
 } from '@discordjs/voice';
-import { CONFIG } from '../config.ts';
-import { Queue } from './queue.ts';
-import { client } from '../index.ts';
+import { CONFIG } from '../config.js';
+import { Queue } from './queue.js';
+import { client } from '../index.js';
 import  { Player } from 'moonlink.js';
 
-
+// Rework this using the Moonlink Player
+// (You normally don't  want to create the player until some one is in vc though)
 
 
 export class AudioPlayerManager {

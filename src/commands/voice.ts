@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
 import { joinVoiceChannel, getVoiceConnection } from '@discordjs/voice';
-import { validateVoiceChannel, getOrCreateConnection } from '../utils/voiceChannel.ts';
-import { client } from '../index.ts';
+import { validateVoiceChannel, getOrCreateConnection } from '../utils/voiceChannel.js';
+import { client } from '../index.js';
 import { Player } from 'moonlink.js';
 
 export function handleJoin(msg: Message): void {

@@ -80,7 +80,8 @@ export class CommandRouter {
                 • \`!clear\` — Clears the entire queue  
                 • \`!skipTo <index>\` — Skips to a specific song in the queue  
                 • \`!seek <time>\` — Seeks to a timestamp in the current song
-                
+                `
+                const helpMessage2 = `
                 **Audio Mix & Effects**
                 • \`!volume <0-100>\` — Sets the volume level
                 • \`!rock\` — Applies Rock EQ preset
@@ -99,6 +100,7 @@ export class CommandRouter {
                 `;
 
                 msg.reply(helpMessage);
+                msg.reply(helpMessage2);
                 break;
 
             case '!add':
@@ -119,7 +121,7 @@ export class CommandRouter {
                 this.musicCommands.handleLoop(msg);
                 break;
 
-            case 'qloop':
+            case '!qloop':
                 this.musicCommands.handleQueueLoop(msg);
                 break;
                      
