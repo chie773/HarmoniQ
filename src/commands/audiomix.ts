@@ -1,8 +1,8 @@
 // src/commands/music/AudioMixCommands.ts
 import { Message } from 'discord.js';
 import { Player } from 'moonlink.js';
-import { validateAndGetConnection } from '../utils/voiceChannel';
-import { EQPresets } from './EQPresets';
+import { validateAndGetConnection } from '../utils/voiceChannel.js';
+import { EQPresets } from './EQPresets.js';
 
 export class AudioMixCommands {
     private player: Player; // Moonlink / Lavalink player
