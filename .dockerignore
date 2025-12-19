@@ -1,0 +1,14 @@
+.vscode
+.github
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+.node-version
+.prettierrc
+config.json
+Functionalities.txt
+eslint-prettier-project
+Dockerfile
+.dockerignore

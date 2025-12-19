@@ -1,15 +1,15 @@
 import { Attachment, Message } from 'discord.js';
 import { getVoiceConnection, VoiceConnection } from '@discordjs/voice';
-import { AudioPlayerManager } from '../audio/player.ts';
-import { Queue } from '../audio/queue.ts';
-import { validateAndGetConnection } from '../utils/voiceChannel.ts';
-import { downloadSongFile, isValidAudioFile, fileExists } from '../utils/fileHandler.ts';
+import { AudioPlayerManager } from '../audio/player.js';
+import { Queue } from '../audio/queue.js';
+import { validateAndGetConnection } from '../utils/voiceChannel.js';
+import { downloadSongFile, isValidAudioFile, fileExists } from '../utils/fileHandler.js';
 import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
-import { client } from '../index.ts';
+import { client } from '../index.js';
 import { Manager, Player, Track } from 'moonlink.js';
-import { isYouTubePlaylistUrl, extractPlaylistId, getPlaylistVideoTitles } from './youtube.ts';
+import { isYouTubePlaylistUrl, extractPlaylistId, getPlaylistVideoTitles } from './youtube.js';
 import { stringify } from 'querystring';
 
 

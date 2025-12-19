@@ -8,34 +8,73 @@ What functionalities do I want my music bot to have
         library so i physically can't do anything about that
         (Soundcloud should work though but I'll come back to that later)
 
+______________________________________________________________________________________
+
+**Done**
+______________________________________________________________________________________
+
+
 2. Pausing and Resuming:
     -- need to be able to use pause and resume commands so the song 
         can stop and start at will --(This exists already)
+ 
+ --- Done ---       
 
 3. Playlist / Music Queue:
     -- must be able to queue songs to play next once current
         song is over
         (Create a file that writes the name of the file )
+--- Done --- (*Built in player features*)
+
+---> Add (!queue Feature --> Shows all the songs in the queue) --- Done ---
+---> Don't Allow duplicates in the queue --- Done ---
+---> Fix !join function --- Done --- (You just gotta use !play first)
+---> Add !Seek *Seconds* --- Done ---
 
 
 4. AudioMix (!!!)
     -- the ability to crossfade into the next song (The Main Seller)
     -- Equalizing features? (Bass boosting, Vocal isolation, etc)
+ -- Done --
 
-5. Creating Slash commands
+ **New Feature - Prioritzing in the queue, bringing something to the top of the queue and keeping previous order**
+
+
+
+
+5. Creating Customizable Command Options
     -- Program should be able to use '!' to indicate a command for the bot
         o Also! need to restrict bot to one channel so it doesn't get overloaded with messages
+
+
+
+
 
 6. Looping functionalities:
     -- Program should be able to loop a song when asked to
     !! Song starts lagging after it loops once (hardware issue or server request issue?)
+
+----- Done -------------------
+
 
 7. End/Skip feature
     -- Be able to stop/skip song at will 
         (either move onto next song in queue or stop playing
             all together) 
 
+______________________________________________________________________________________
+
+**Done**
+______________________________________________________________________________________
+
+
 8. Duration (Check How long is remaining in song)
+
+ -- Done ----------------------------------------
+
+
+
+
 What do I currently have to lookout for (in terms of intricacies with the bot)
 
 1. Staying in One VC
@@ -45,6 +84,8 @@ What do I currently have to lookout for (in terms of intricacies with the bot)
 2. Making sure that !play feature isnt abused
     - If play is called while a song is currently playing, prompt user
         with 'are you sure' before song is forcefully changed
+----> Forces Song to be queued // When bot is paused it autoplays
+
 
 3. Cleanliness of code and portability
     - This is a usable project, the only working feature being play, pause
@@ -59,3 +100,21 @@ Random Notes***
 
 Future Possibilities:
     -- Incorporate AI, for music recommendations and unique responses (Lets Finish the Project First)
+
+
+
+How do I implement the lavalink lavalink player
+ -- Need to find where I can put the player so that it'll NOT break the entire code
+  -- Spot must be on startup basically
+   -- Issue is, the player needs someone to be in call already for it to be initialized
+    | Hotfix: Player will be initialized on the first command
+     -- Will only be implemented on Youtube links
+     -- Have a function that checks if player is created ()
+
+    | Needs:
+        - Find a way to kill the discord audioplayer whenever yt link is played
+            --> unsubscribe() --> subscribe() lavalink player
+
+    - So apparently I can initalize the player with just the guild ID, so lets start coding
+
+This works, now it's time for me to get the rest of the commands to work
