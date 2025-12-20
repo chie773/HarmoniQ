@@ -11,7 +11,7 @@ export class AudioMixCommands {
         this.player = player;
     }
 
-    setVolume(msg: Message, volume: number) {
+    setVolume(msg: Message, args: string) {
         const result = validateAndGetConnection(msg);
         if (!result) return;
         
@@ -21,6 +21,13 @@ export class AudioMixCommands {
             msg.reply(`I'm not in a voice channel!`);
             return;
         }
+        
+        if (Number.isNaN(args)) {
+            msg.reply("This is not a valid number!");
+            return;
+        }
+
+        const volume = parseInt(args, 10);
 
         if (!this.player?.playing) {
             return msg.reply('Nothing is playing.');
@@ -166,8 +173,28 @@ export class AudioMixCommands {
 
     set8DAudio(msg: Message) {
         // Apply 8D audio effect
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const { connection } = result;
+        if (!connection) return msg.reply(`I'm not in a voice channel!`);
+
         this.player.filters.setRotation({
-            rotationHz: 0.3  // Slow rotation
+            rotationHz: 0.1  // Slow rotation
+        });
+    }
+
+    setSlowedReverb(msg: Message){
+        const result = validateAndGetConnection(msg);
+        if (!result) return;
+
+        const { connection } = result;
+        if (!connection) return msg.reply(`I'm not in a voice channel!`);
+
+        this.player.filters.setTimescale({
+            speed: 0.87,  // half speed
+            pitch: 0.87,  // keep normal pitch
+            rate: 1.0
         });
     }
 

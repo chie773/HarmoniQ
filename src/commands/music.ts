@@ -187,11 +187,11 @@ export class MusicCommands {
                 this.moonlinkPlayer.queue.add(results.tracks[0]);
                 let message = `**${results.tracks[0].title}** has been added to the queue!`;
                 if (!this.moonlinkPlayer.playing && !this.moonlinkPlayer.paused){
-                  this.moonlinkPlayer.play();
+                    await this.moonlinkPlayer.play();
                     
-                  message += (`Currently Playing: ${this.moonlinkPlayer.current.title}`);
-                  msg.reply(message); 
-                  return;
+                    message += (`Currently Playing: ${this.moonlinkPlayer.current.title}`);
+                    msg.reply(message); 
+                    return;
                 } 
             }
         } else {
@@ -269,16 +269,16 @@ export class MusicCommands {
 
     private async handleQueuePlay(msg: Message, connection: VoiceConnection): Promise<void> {
 
-        if (this.moonlinkPlayer.queue.isEmpty()) {
-            msg.reply('Please Tell Me what song you want to play!');
+        if (this.moonlinkPlayer.queue.isEmpty) {
+            msg.reply('Please tell Me what song you want to play!');
             return;
         }
 
         if (this.moonlinkPlayer.idle) {
             this.moonlinkPlayer.play();
-            msg.reply('~Playing from queue~');
+            this.handleCurrentSong(msg);
         } else {
-            msg.reply('Song is already playing! Use !skip to skip the current song.');
+            msg.reply('Something is already playing!');
         }
     }
 
@@ -295,7 +295,7 @@ export class MusicCommands {
 
         if (this.moonlinkPlayer.playing || this.moonlinkPlayer.paused) {
             this.moonlinkPlayer.setLoop('off');
-            this.moonlinkPlayer.stop()
+            this.moonlinkPlayer.stop();
             msg.reply("Player has been stopped!")
         } else {
             msg.reply('Nothing is playing')
