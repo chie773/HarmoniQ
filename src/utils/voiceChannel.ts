@@ -4,7 +4,6 @@ import { getVoiceConnection, joinVoiceChannel, VoiceConnection } from '@discordj
 export function validateVoiceChannel(msg: Message): VoiceBasedChannel | null {
     const voiceChannel = msg.member?.voice?.channel;
     if (!voiceChannel) {
-        msg.reply('You need to be in a voice channel first!');
         return null;
     }
     return voiceChannel;

@@ -108,6 +108,10 @@ export class CommandRouter {
             case '!p':
                 await this.musicCommands.handlePlay(msg, args);
                 break;
+            
+            case '!stop':
+                this.musicCommands.handleStop(msg);
+                break;
 
             case '!pause':
                 this.musicCommands.handlePause(msg);
@@ -129,7 +133,6 @@ export class CommandRouter {
                 this.musicCommands.handleStopLoop(msg);
                 break;
             
-
             case '!skip':
                 this.musicCommands.handleSkip(msg);
                 break;
@@ -175,9 +178,8 @@ export class CommandRouter {
             case '!volume':
             case '!v':
         // expects args[0] to be the volume number
-            const volume = parseInt(args[0], 10);
-                this.audioMixCommands.setVolume(msg, volume);
-            break;
+                this.audioMixCommands.setVolume(msg, args[0]);
+                break;
 
             case '!rock':
                 this.audioMixCommands.setRock(msg);
@@ -226,6 +228,10 @@ export class CommandRouter {
 
             case '!8d':
                 this.audioMixCommands.set8DAudio(msg);
+                break;
+
+            case '!slowedreverb':
+                this.audioMixCommands.setSlowedReverb(msg);
                 break;
 
             case '!clearfilters':
