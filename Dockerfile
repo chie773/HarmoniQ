@@ -1,6 +1,8 @@
 ARG NODE_VERSION=22.21.0-slim
 FROM node:${NODE_VERSION}
 
+WORKDIR /app
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       python3 \
@@ -8,11 +10,13 @@ RUN apt-get update && \
       libopus-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY  . . 
+COPY package*.json ./
+RUN npm ci
 
-RUN npm install 
+COPY . .
+
 RUN npm run build
 
-RUN npm prune --production
+RUN npm prune --omit=dev
 
-CMD [ "node" , "./dist/index.js"]
+CMD ["node", "dist/index.js"]
