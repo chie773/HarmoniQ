@@ -63,6 +63,7 @@ export class MusicCommands {
         }
 
         const songUrl = await fetch(attachment.url);
+        console.log(songUrl);
         const result = await client.manager.search({query: songUrl.url});
         if (result.tracks.length < 1) {
                 console.log('No tracks found');
@@ -771,7 +772,7 @@ export class MusicCommands {
             return;
         } //Javascript can see if you null check your variables (Thats actually pretty cool)
 
-        this.moonlinkPlayer = client.manager.createPlayer({
+        this.moonlinkPlayer = client.manager.players.create({
                 guildId: connection.joinConfig.guildId,
                 voiceChannelId: channelId,
                 textChannelId: msg.channel.id,

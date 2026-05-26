@@ -64,6 +64,10 @@ if (Number.isNaN(port)) {
   throw new Error("PORT must be a valid number");
 }
 
+if (!process.env.LAVALINK_TOKEN){
+    throw new Error("Lavalink Token Not Defined");
+}
+
 
 
 client.manager = new Manager({
@@ -76,9 +80,9 @@ client.manager = new Manager({
         },
     ],
     options: {} as any,
-    sendPayload: (guildId: string, payload: string) => {
+    send: (guildId: string, payload: string) => {
         const guild = client.guilds.cache.get(guildId);
-        if (guild) guild.shard.send(JSON.parse(payload));
+        if (guild) guild.shard.send(payload);
     },
 });
 
