@@ -268,7 +268,7 @@ export class CommandRouter {
             return;
         } //Javascript can see if you null check your variables (Thats actually pretty cool)
 
-        this.moonlinkPlayer = client.manager.createPlayer({
+        this.moonlinkPlayer = client.manager.players.create({
                 guildId: connection.joinConfig.guildId,
                 voiceChannelId: channelId,
                 textChannelId: msg.channel.id,
