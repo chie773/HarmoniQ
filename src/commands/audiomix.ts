@@ -2,7 +2,7 @@
 import { Message } from 'discord.js';
 import { Player } from 'moonlink.js';
 import { validateAndGetConnection } from '../utils/voiceChannel.js';
-import { EQPresets } from './EQPresets.js';
+import { FILTERS } from './EQPresets.js';
 
 export class AudioMixCommands {
     private player: Player; // Moonlink / Lavalink player
@@ -51,7 +51,7 @@ export class AudioMixCommands {
             return;
         }
 
-        this.player.filters.setEqualizer(EQPresets.Rock);
+        this.player.filters.setEqualizer(FILTERS.Rock);
         msg.reply(`🎸 Rock preset applied!`);
     }
 
@@ -65,7 +65,7 @@ export class AudioMixCommands {
             return;
         }
 
-        this.player.filters.setEqualizer(EQPresets.BassBoost);
+        this.player.filters.setEqualizer(FILTERS.BassBoost);
         msg.reply(`🎚️ Bass Boost preset applied!`);
     }
 
@@ -75,7 +75,7 @@ export class AudioMixCommands {
         const { connection } = result;
         if (!connection) return msg.reply(`I'm not in a voice channel!`);
 
-        this.player.filters.setEqualizer(EQPresets.Pop);
+        this.player.filters.setEqualizer(FILTERS.Pop);
         msg.reply(`🎤 Pop preset applied!`);
     }
 
@@ -85,7 +85,7 @@ export class AudioMixCommands {
         const { connection } = result;
         if (!connection) return msg.reply(`I'm not in a voice channel!`);
 
-        this.player.filters.setEqualizer(EQPresets.Jazz);
+        this.player.filters.setEqualizer(FILTERS.Jazz);
         msg.reply(`🎷 Jazz preset applied!`);
     }
 
@@ -95,7 +95,7 @@ export class AudioMixCommands {
         const { connection } = result;
         if (!connection) return msg.reply(`I'm not in a voice channel!`);
 
-        this.player.filters.setEqualizer(EQPresets.Deep);
+        this.player.filters.setEqualizer(FILTERS.Deep);
         msg.reply(`🔊 Deep preset applied!`);
     }
 
@@ -105,7 +105,7 @@ export class AudioMixCommands {
         const { connection } = result;
         if (!connection) return msg.reply(`I'm not in a voice channel!`);
 
-        this.player.filters.setEqualizer(EQPresets.Flat);
+        this.player.filters.setEqualizer(FILTERS.Flat);
         msg.reply(`⚪ Flat preset applied!`);
     }
 
@@ -115,7 +115,7 @@ export class AudioMixCommands {
         const { connection } = result;
         if (!connection) return msg.reply(`I'm not in a voice channel!`);
 
-        this.player.filters.setEqualizer(EQPresets.HipHop);
+        this.player.filters.setEqualizer(FILTERS.HipHop);
         msg.reply(`🎧 Hip-Hop preset applied!`);
     }
 
@@ -125,7 +125,7 @@ export class AudioMixCommands {
         const { connection } = result;
         if (!connection) return msg.reply(`I'm not in a voice channel!`);
 
-        this.player.filters.setEqualizer(EQPresets.Classical);
+        this.player.filters.setEqualizer(FILTERS.Classical);
         msg.reply(`🎼 Classical preset applied!`);
     }
 
@@ -135,7 +135,7 @@ export class AudioMixCommands {
         const { connection } = result;
         if (!connection) return msg.reply(`I'm not in a voice channel!`);
 
-        this.player.filters.setEqualizer(EQPresets.SpokenWord);
+        this.player.filters.setEqualizer(FILTERS.SpokenWord);
         msg.reply(`🗣️ Spoken Word preset applied!`);
     }
 
@@ -199,7 +199,7 @@ export class AudioMixCommands {
     }
 
     clearFilters(msg: Message) {
-        this.player.filters.resetFilters();
+        this.player.filters.reset();
         msg.reply('All Audio filters cleared!');
     }
 
